@@ -4,6 +4,7 @@ const http = require('http');
 const path = require('path');
 const LogMonitor = require('../services/LogMonitor');
 const { loadConfig } = require('../utils/config');
+const configManager = require('../utils/config-manager');
 
 class WebServer {
     constructor() {
@@ -150,6 +151,25 @@ class WebServer {
             }
 
             res.json({ error: 'Unknown command. Type /help for available commands.' });
+        });
+
+        this.app.get('/api/config', (req, res) => {
+            res.json(configManager.getAll());
+        });
+
+        this.app.post('/api/config', (req, res) => {
+            const { key, value } = req.body;
+            try {
+                configManager.set(key, value);
+                res.json({ success: true, config: configManager.getAll() });
+            } catch (error) {
+                res.status(400).json({ error: error.message });
+            }
+        });
+
+        this.app.post('/api/config/reset', (req, res) => {
+            configManager.reset();
+            res.json(configManager.getAll());
         });
 
         // WebSocket handling
