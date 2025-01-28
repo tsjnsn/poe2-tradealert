@@ -11,17 +11,12 @@
   "pkg": {
     "assets": [
       "src/**/*",
-      "config.json",
-      "!**/node_modules/open/xdg-open"
+      "config.json"
     ],
     "targets": [
       "node16-win-x64"
     ],
-    "outputPath": "dist",
-    "scripts": [
-      "node_modules/open/index.js",
-      "node_modules/open/windows.js"
-    ]
+    "outputPath": "dist"
   },
   "scripts": {
     "start": "node src/index.js",
@@ -35,8 +30,7 @@
   "dependencies": {
     "chokidar": "^3.6.0",
     "express": "^4.21.2",
-    "node-fetch": "^2.7.0",
-    "open": "^8.4.2"
+    "node-fetch": "^2.7.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.0",
