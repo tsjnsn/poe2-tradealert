@@ -19,7 +19,6 @@ async function waitForCallback() {
     const serverPromise = new Promise((resolve, reject) => {
         const server = http.createServer(async (req, res) => {
             try {
-                console.log('Received request:', req.url);
                 const { pathname, query } = parse(req.url, true);
 
                 // Ignore favicon requests
@@ -194,7 +193,7 @@ async function waitForCallback() {
 
         // Start listening
         server.listen(port, 'localhost', () => {
-            console.log(`Callback server listening on port ${port}`);
+            resolve({ port });
         });
 
         // Set a timeout

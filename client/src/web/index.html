@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>POE2 Trade Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto max-w-3xl p-5">
+        <div id="auth-status" class="flex items-center justify-between p-3 mb-4 rounded-lg bg-red-50 text-red-900">
+            <span>🔴 Not connected to Discord</span>
+            <div class="flex gap-2">
+                <button onclick="authenticate()" class="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                    Connect
+                </button>
+                <button onclick="logout()" class="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors hidden">
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-5 mb-5">
+            <h2 class="text-xl font-semibold mb-4">Monitor Statistics</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-gray-50 rounded-lg p-3 text-center">
+                    <div class="text-sm text-gray-600 mb-1">Uptime</div>
+                    <div id="uptime" class="text-lg font-medium text-gray-900">00:00:00</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3 text-center">
+                    <div class="text-sm text-gray-600 mb-1">Lines Processed</div>
+                    <div id="lines" class="text-lg font-medium text-gray-900">0</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3 text-center">
+                    <div class="text-sm text-gray-600 mb-1">Trade Messages</div>
+                    <div id="trades" class="text-lg font-medium text-gray-900">0</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3 text-center">
+                    <div class="text-sm text-gray-600 mb-1">Unique Players</div>
+                    <div id="players" class="text-lg font-medium text-gray-900">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="console" class="bg-gray-900 text-gray-200 rounded-xl p-4 mb-4 h-[300px] overflow-y-auto font-mono">
+            <div class="text-gray-400">Welcome to POE2 Trade Monitor</div>
+            <div class="text-gray-400">Type /help for available commands</div>
+        </div>
+
+        <div class="flex gap-2">
+            <input 
+                type="text" 
+                id="command" 
+                placeholder="Enter command..." 
+                onkeydown="handleCommand(event)"
+                class="flex-1 px-3 py-2 bg-gray-800 text-gray-200 rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 font-mono"
+            >
+        </div>
+    </div>
+
+    <script>
+        const commands = {
+            '/help': 'Show available commands',
+            '/test-message': 'Send a test trade message',
+            '/clear': 'Clear the console'
+        };
+
+        function authenticate() {
+            fetch('/api/auth/start')
+                .then(response => response.json())
+                .then(data => {
+                    window.open(data.authUrl, 'discord_auth', 'width=600,height=800');
+                })
+                .catch(error => {
+                    addMessage('Error starting authentication: ' + error.message, 'error');
+                });
+        }
+
+        function logout() {
+            fetch('/api/auth/logout', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    addMessage('Logged out successfully', 'system');
+                })
+                .catch(error => {
+                    addMessage('Error logging out: ' + error.message, 'error');
+                });
+        }
+
+        // Handle auth window messages
+        window.addEventListener('message', (event) => {
+            if (event.data === 'auth-success') {
+                addMessage('Authentication successful!', 'system');
+            } else if (event.data === 'auth-error') {
+                addMessage('Authentication failed. Please try again.', 'error');
+            }
+        });
+
+        function addMessage(text, type = 'system') {
+            const console = document.getElementById('console');
+            const message = document.createElement('div');
+            
+            let classes = 'py-1 px-2 rounded';
+            switch(type) {
+                case 'trade':
+                    classes += ' bg-blue-900/30';
+                    break;
+                case 'error':
+                    classes += ' text-red-400';
+                    break;
+                case 'system':
+                    classes += ' text-gray-400 italic';
+                    break;
+            }
+            
+            message.className = classes;
+            message.textContent = text;
+            console.appendChild(message);
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function handleCommand(event) {
+            if (event.key !== 'Enter') return;
+
+            const input = event.target;
+            const command = input.value.trim();
+            input.value = '';
+
+            if (!command) return;
+
+            addMessage('> ' + command);
+
+            if (command === '/help') {
+                Object.entries(commands).forEach(([cmd, desc]) => {
+                    addMessage(`${cmd}: ${desc}`);
+                });
+                return;
+            }
+
+            if (command === '/clear') {
+                document.getElementById('console').innerHTML = '';
+                return;
+            }
+
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    addMessage(data.error, 'error');
+                } else {
+                    addMessage(data.message);
+                }
+            })
+            .catch(error => {
+                addMessage('Error executing command: ' + error.message, 'error');
+            });
+        }
+
+        setInterval(() => {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(stats => {
+                    document.getElementById('uptime').textContent = stats.uptime;
+                    document.getElementById('lines').textContent = stats.linesProcessed.toLocaleString();
+                    document.getElementById('trades').textContent = stats.tradeMessages.toLocaleString();
+                    document.getElementById('players').textContent = stats.uniquePlayers.toLocaleString();
+
+                    const authStatus = document.getElementById('auth-status');
+                    const connectButton = authStatus.querySelector('button[onclick="authenticate()"]');
+                    const logoutButton = authStatus.querySelector('button[onclick="logout()"]');
+
+                    if (stats.connected) {
+                        authStatus.className = 'flex items-center justify-between p-3 mb-4 rounded-lg bg-green-50 text-green-900';
+                        authStatus.firstElementChild.textContent = '🟢 Connected to Discord';
+                        connectButton.style.display = 'none';
+                        logoutButton.style.display = 'block';
+                    } else {
+                        authStatus.className = 'flex items-center justify-between p-3 mb-4 rounded-lg bg-red-50 text-red-900';
+                        authStatus.firstElementChild.textContent = '🔴 Not connected to Discord';
+                        connectButton.style.display = 'block';
+                        logoutButton.style.display = 'none';
+                    }
+                });
+        }, 1000);
+
+        const ws = new WebSocket('ws://' + location.host);
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'trade') {
+                const messageText = data.error 
+                    ? `Trade from ${data.player}: ${data.message}\n⚠️ ${data.error}`
+                    : `Trade from ${data.player}: ${data.message}`;
+                addMessage(messageText, data.error ? 'error' : 'trade');
+            }
+        };
+    </script>
+</body>
+</html> 

@@ -14,7 +14,9 @@ function loadConfig() {
     // Validate required variables
     const requiredVars = [
         'POE2_LOG_PATH',
-        'BOT_SERVER_URL'
+        'BOT_SERVER_URL',
+        'DISCORD_CLIENT_ID',
+        'CLIENT_PORT'
     ];
 
     const missingVars = requiredVars.filter(key => !process.env[key]);
@@ -28,9 +30,14 @@ function loadConfig() {
 
     // Normalize paths based on OS
     if (process.env.POE2_LOG_PATH) {
+        // First replace environment variables
         process.env.POE2_LOG_PATH = process.env.POE2_LOG_PATH
             .replace('%APPDATA%', process.env.APPDATA || '')
             .replace('~', process.env.HOME || '');
+
+        // Then resolve the path using our path utility
+        process.env.POE2_LOG_PATH = resolvePath(process.env.POE2_LOG_PATH);
+        console.log('Normalized log path:', process.env.POE2_LOG_PATH);
     }
 
     // Normalize bot server URL (remove trailing slash)
@@ -84,8 +91,10 @@ function loadConfig() {
     }
 
     return {
-        logPath: resolvePath(process.env.POE2_LOG_PATH),
+        logPath: process.env.POE2_LOG_PATH,
         botServerUrl: process.env.BOT_SERVER_URL,
+        clientId: process.env.DISCORD_CLIENT_ID,
+        clientPort: process.env.CLIENT_PORT,
         getDiscordTokens,
         setDiscordTokens,
         clearDiscordTokens,

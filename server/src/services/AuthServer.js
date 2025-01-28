@@ -1,20 +1,11 @@
 const express = require('express');
 const fetch = require('node-fetch');
-const session = require('express-session');
 
 class AuthServer {
     constructor(discordBot) {
         this.app = express();
         this.discordBot = discordBot;
         
-        // Add session support
-        this.app.use(session({
-            secret: process.env.SESSION_SECRET || 'dev-secret-key',
-            resave: false,
-            saveUninitialized: true,
-            cookie: { secure: process.env.NODE_ENV === 'production' }
-        }));
-
         // Parse JSON bodies
         this.app.use(express.json());
 
@@ -55,28 +46,50 @@ class AuthServer {
             const callbackPort = req.query.callback_port;
 
             if (!callbackPort) {
-                return res.status(400).send('No callback port provided');
+                return res.status(400).json({ error: 'No callback port provided' });
             }
 
-            // Store callback port in session for after Discord redirects back
-            req.session.callback_port = callbackPort;
+            // Generate a state parameter to validate the callback
+            const state = Buffer.from(JSON.stringify({ callback_port: callbackPort })).toString('base64');
 
-            // Redirect to Discord OAuth
+            // Return auth URL instead of redirecting
             const redirectUri = `http://localhost:${process.env.PORT}/auth/callback`;
-            const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=identify`;
-            res.redirect(authUrl);
+            const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=identify%20bot&permissions=8192&state=${state}`;
+            res.json({ url: authUrl });
         });
 
         this.app.get('/auth/callback', async (req, res) => {
-            const { code } = req.query;
-            const clientCallbackPort = req.session.callback_port;
+            console.log('Incoming callback request headers:', req.headers);
+            console.log('Query parameters:', req.query);
+            
+            const { code, state } = req.query;
+            
+            let clientCallbackPort;
+            try {
+                const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+                clientCallbackPort = stateData.callback_port;
+                console.log('Retrieved callback port from state:', clientCallbackPort);
+            } catch (error) {
+                console.error('Failed to parse state:', error);
+                return res.status(400).send('Invalid state parameter. Please close this window and try again.');
+            }
+            
+            const handleError = (message) => {
+                console.error('Auth error:', message);
+                if (clientCallbackPort) {
+                    const errorData = Buffer.from(JSON.stringify({ error: message })).toString('base64');
+                    return res.redirect(`http://localhost:${clientCallbackPort}/auth/callback?error=${errorData}`);
+                } else {
+                    return res.status(400).send(`Authentication error: ${message}. Please close this window and try again.`);
+                }
+            };
             
             if (!code) {
-                return res.status(400).send('No code provided');
+                return handleError('No authorization code provided');
             }
 
             if (!clientCallbackPort) {
-                return res.status(400).send('No callback port found in session');
+                return handleError('No callback port found in session');
             }
 
             try {
@@ -89,7 +102,7 @@ class AuthServer {
                         code,
                         grant_type: 'authorization_code',
                         redirect_uri: `http://localhost:${process.env.PORT}/auth/callback`,
-                        scope: 'identify',
+                        scope: 'identify bot',
                     }),
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -97,7 +110,9 @@ class AuthServer {
                 });
 
                 if (!tokenResponse.ok) {
-                    throw new Error('Failed to exchange code for tokens');
+                    const errorText = await tokenResponse.text();
+                    console.error('Token exchange failed:', errorText);
+                    return handleError('Failed to exchange code for tokens');
                 }
 
                 const tokenData = await tokenResponse.json();
@@ -110,16 +125,15 @@ class AuthServer {
                 });
 
                 if (!userResponse.ok) {
-                    throw new Error('Failed to get user info');
+                    const errorText = await userResponse.text();
+                    console.error('User info fetch failed:', errorText);
+                    return handleError('Failed to get user info');
                 }
 
                 const userData = await userResponse.json();
                 
                 // Link user in bot
                 await this.discordBot.linkUser(userData.id);
-
-                // Clear session
-                delete req.session.callback_port;
 
                 // Redirect to client with tokens and user info
                 const responseData = {
@@ -131,13 +145,7 @@ class AuthServer {
                 res.redirect(`http://localhost:${clientCallbackPort}/auth/callback?data=${encodedData}`);
             } catch (error) {
                 console.error('Auth error:', error);
-                // Attempt to redirect back to client with error
-                if (clientCallbackPort) {
-                    const errorData = Buffer.from(JSON.stringify({ error: error.message })).toString('base64');
-                    res.redirect(`http://localhost:${clientCallbackPort}/auth/callback?error=${errorData}`);
-                } else {
-                    res.status(500).send('Authentication failed');
-                }
+                return handleError(error.message);
             }
         });
 

@@ -7,12 +7,12 @@ const { resolvePath } = require('../utils/paths');
 const fetch = require('node-fetch');
 
 class LogMonitor extends EventEmitter {
-    constructor(logPath) {
+    constructor(logPath, options = {}) {
         super();
         this.logPath = this.initializePath(logPath);
         this.watcher = null;
         this.lastPosition = null;
-        this.statsLineCount = 12;
+        this.webMode = options.webMode || false;
         this.authPrompted = false;
         
         // Statistics
@@ -25,8 +25,10 @@ class LogMonitor extends EventEmitter {
             lastUpdate: new Date()
         };
 
-        // Print stats periodically
-        setInterval(() => this.updateStats(), 1000);
+        // Only set up stats interval if not in web mode
+        if (!this.webMode) {
+            setInterval(() => this.updateStats(), 1000);
+        }
     }
 
     moveCursorToStats() {
@@ -54,6 +56,8 @@ class LogMonitor extends EventEmitter {
     }
 
     updateStats() {
+        if (this.webMode) return; // Skip console output in web mode
+        
         const now = new Date();
         const uptime = Math.floor((now - this.stats.startTime) / 1000);
         const hours = Math.floor(uptime / 3600);
@@ -159,10 +163,12 @@ class LogMonitor extends EventEmitter {
     }
 
     start() {
-        // Clear screen and set up display regions
-        process.stdout.write('\x1B[2J\x1B[H'); // Clear screen and move to top
-        console.log('Monitoring:', this.logPath);
-        console.log('\nTrade messages will appear below:\n');
+        if (!this.webMode) {
+            // Clear screen and set up display regions only in console mode
+            process.stdout.write('\x1B[2J\x1B[H');
+            console.log('Monitoring:', this.logPath);
+            console.log('\nTrade messages will appear below:\n');
+        }
         
         // Create watcher
         this.watcher = chokidar.watch(this.logPath, {
@@ -180,7 +186,9 @@ class LogMonitor extends EventEmitter {
         try {
             const stats = fs.statSync(this.logPath);
             this.lastPosition = stats.size;
-            this.updateStats();
+            if (!this.webMode) {
+                this.updateStats();
+            }
         } catch (error) {
             console.error('Error accessing log file:', error);
             return;
@@ -201,12 +209,16 @@ class LogMonitor extends EventEmitter {
         const tokens = getDiscordTokens();
         
         if (!tokens) {
-            console.log('No Discord tokens available. Trade alert will only be shown locally.');
-            console.log(`Trade request from ${player}: ${message}`);
+            if (!this.webMode) {
+                console.log('No Discord tokens available. Trade alert will only be shown locally.');
+                console.log(`Trade request from ${player}: ${message}`);
+            }
+            this.emit('trade', { player, message, error: 'Not connected to Discord' });
             return;
         }
 
         try {
+            console.log(`Sending trade alert to ${botServerUrl}/api/trade-alert`);
             const response = await fetch(`${botServerUrl}/api/trade-alert`, {
                 method: 'POST',
                 headers: {
@@ -216,26 +228,64 @@ class LogMonitor extends EventEmitter {
                 body: JSON.stringify({ player, message })
             });
 
+            const responseText = await response.text();
+            console.log('API Response:', response.status, responseText);
+
+            let errorData;
+            try {
+                errorData = responseText ? JSON.parse(responseText) : {};
+            } catch (e) {
+                errorData = { error: responseText };
+            }
+
             if (response.status === 401) {
-                // Token expired, try to refresh
+                console.log('Token expired, attempting refresh...');
                 try {
                     await refreshDiscordTokens();
-                    // Retry with new token
+                    console.log('Token refreshed successfully, retrying alert...');
                     return this.sendTradeAlert(player, message);
                 } catch (refreshError) {
-                    console.error('Failed to refresh Discord token:', refreshError);
-                    console.log('Please re-authenticate by visiting the bot server auth page');
+                    console.log('Token refresh failed:', refreshError);
+                    if (!this.webMode) {
+                        console.log('Discord session expired. Please re-authenticate.');
+                    }
+                    this.emit('trade', { player, message, error: 'Discord session expired' });
                     return;
                 }
             }
 
             if (!response.ok) {
-                throw new Error(`Failed to send trade alert: ${response.statusText}`);
+                if (errorData.error === 'Cannot send messages to this user') {
+                    const error = 'Cannot send Discord DMs. Please enable DMs from server members in your Discord privacy settings.';
+                    if (!this.webMode) {
+                        console.log(error);
+                        console.log(`Trade request from ${player}: ${message}`);
+                    }
+                    this.emit('trade', { player, message, error });
+                    return;
+                }
+                throw new Error(errorData.error || 'Failed to send trade alert');
             }
+
+            console.log('Trade alert sent successfully');
+            // Success case
+            this.emit('trade', { player, message });
         } catch (error) {
-            console.error('Error sending trade alert:', error);
-            console.log(`Trade request from ${player}: ${message}`);
+            console.log('Error sending trade alert:', error);
+            if (!this.webMode) {
+                console.log('Error sending trade alert. Message will only be shown locally:');
+                console.log(`Trade request from ${player}: ${message}`);
+            }
+            this.emit('trade', { player, message, error: error.message });
         }
+    }
+
+    async sendTestMessage() {
+        const testMessage = '[INFO Client 1234] @From TestTrader: Hi, I would like to buy your Test Item listed for 5 divine in Standard';
+        if (!this.webMode) {
+            console.log('\n📨 Sending test trade alert...');
+        }
+        await this.sendTradeAlert('TestTrader', testMessage);
     }
 
     processNewLines() {

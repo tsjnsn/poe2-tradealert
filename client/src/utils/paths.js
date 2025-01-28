@@ -11,24 +11,33 @@ function isWSL() {
     }
 }
 
+function isWindowsPath(inputPath) {
+    return /^[A-Za-z]:\\/.test(inputPath) || /^"[A-Za-z]:\\/.test(inputPath);
+}
+
 function convertWindowsPathToWSL(windowsPath) {
     try {
         // Remove quotes if present
         windowsPath = windowsPath.replace(/^"(.*)"$/, '$1');
         
-        // Convert backslashes to forward slashes
-        windowsPath = windowsPath.replace(/\\/g, '/');
-        
-        // Convert C: to /mnt/c
-        windowsPath = windowsPath.replace(/^([A-Za-z]):/, (_, drive) => `/mnt/${drive.toLowerCase()}`);
-        
-        // For more complex paths, use wslpath
-        try {
-            return execSync(`wslpath "${windowsPath}"`, { encoding: 'utf8' }).trim();
-        } catch {
+        // If it's not a Windows path, return as is
+        if (!isWindowsPath(windowsPath)) {
             return windowsPath;
         }
+
+        // Convert backslashes to forward slashes for wslpath
+        const normalizedPath = windowsPath.replace(/\\/g, '/');
+        
+        // Use wslpath for conversion
+        try {
+            return execSync(`wslpath -a "${normalizedPath}"`, { encoding: 'utf8' }).trim();
+        } catch (error) {
+            console.error('Error using wslpath:', error);
+            // Fallback: manual conversion
+            return normalizedPath.replace(/^([A-Za-z]):/, (_, drive) => `/mnt/${drive.toLowerCase()}`);
+        }
     } catch (error) {
+        console.error('Error converting Windows path:', error);
         return windowsPath;
     }
 }
@@ -36,19 +45,23 @@ function convertWindowsPathToWSL(windowsPath) {
 function resolvePath(inputPath) {
     if (!inputPath) return inputPath;
 
+    // Remove quotes
+    inputPath = inputPath.replace(/^"(.*)"$/, '$1');
+
     // Replace environment variables
     inputPath = inputPath.replace(/%([^%]+)%/g, (_, n) => process.env[n] || '');
     inputPath = inputPath.replace(/~/, process.env.HOME || '');
 
-    // Convert to absolute path
-    inputPath = path.resolve(inputPath);
-
-    // Convert to WSL path if needed
-    if (isWSL() && /^[A-Za-z]:\\/.test(inputPath)) {
-        return convertWindowsPathToWSL(inputPath);
+    // If we're in WSL and this is a Windows path, convert it
+    if (isWSL() && isWindowsPath(inputPath)) {
+        console.log('Converting Windows path to WSL:', inputPath);
+        const wslPath = convertWindowsPathToWSL(inputPath);
+        console.log('Converted path:', wslPath);
+        return wslPath;
     }
 
-    return inputPath;
+    // For non-Windows paths or when not in WSL, just normalize
+    return path.normalize(inputPath);
 }
 
 module.exports = { resolvePath }; 
