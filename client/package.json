@@ -3,25 +3,47 @@
   "version": "1.0.0",
   "description": "Client application for Path of Exile 2 trade notifications",
   "main": "src/index.js",
+  "bin": "src/index.js",
   "engines": {
     "node": ">=16",
     "pnpm": ">=8"
+  },
+  "pkg": {
+    "assets": [
+      "src/**/*",
+      "config.json",
+      "node_modules/ws/**/*.js",
+      "node_modules/ws/**/*.json",
+      "!**/node_modules/open/xdg-open"
+    ],
+    "targets": [
+      "node16-win-x64"
+    ],
+    "outputPath": "dist",
+    "scripts": [
+      "node_modules/ws/**/*.js",
+      "node_modules/open/index.js",
+      "node_modules/open/windows.js"
+    ]
   },
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test:monitor": "node src/test-monitor.js",
     "test:message": "node src/test-message.js",
-    "test:scan": "node src/test-scan.js"
+    "test:scan": "node src/test-scan.js",
+    "build": "pkg .",
+    "build:win": "pkg . --target node16-win-x64 --output dist/poe2-tradealert.exe --no-bytecode --public"
   },
   "dependencies": {
     "chokidar": "^3.6.0",
-    "dotenv": "^16.4.5",
     "express": "^4.21.2",
     "node-fetch": "^2.7.0",
-    "open": "^10.1.0"
+    "open": "^8.4.2",
+    "ws": "^8.16.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.0",
+    "pkg": "^5.8.1"
   }
 }

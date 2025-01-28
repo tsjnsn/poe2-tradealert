@@ -3,8 +3,8 @@ const WebSocket = require('ws');
 const http = require('http');
 const path = require('path');
 const LogMonitor = require('../services/LogMonitor');
-const { loadConfig } = require('../utils/config');
 const configManager = require('../utils/config-manager');
+const fetch = require('node-fetch');
 
 class WebServer {
     constructor() {
@@ -13,11 +13,11 @@ class WebServer {
         this.wss = new WebSocket.Server({ server: this.server });
         this.clients = new Set();
 
-        // Load configuration
-        const { logPath, botServerUrl, getDiscordTokens, setDiscordTokens, clearDiscordTokens, clientId, clientPort } = loadConfig();
+        // Validate configuration
+        configManager.validate();
 
         // Create monitor in web mode
-        this.monitor = new LogMonitor(logPath, { webMode: true });
+        this.monitor = new LogMonitor(configManager.get('poe2.logPath'), { webMode: true });
 
         // Serve static files
         this.app.use(express.static(path.join(__dirname)));
@@ -36,17 +36,20 @@ class WebServer {
                 linesProcessed: stats.totalLinesProcessed,
                 tradeMessages: stats.tradeMessagesFound,
                 uniquePlayers: stats.players.size,
-                connected: !!getDiscordTokens()
+                connected: this.monitor.isConnected()
             });
         });
 
         this.app.post('/api/auth/logout', (req, res) => {
-            clearDiscordTokens();
+            this.monitor.clearAuth();
             res.json({ message: 'Logged out successfully' });
         });
 
         this.app.get('/api/auth/start', async (req, res) => {
             try {
+                const botServerUrl = configManager.get('discord.botServerUrl');
+                const clientPort = configManager.get('server.clientPort');
+                
                 console.log('Starting auth with bot server:', `${botServerUrl}/auth`);
                 const response = await fetch(`${botServerUrl}/auth?callback_port=${clientPort}`, {
                     method: 'GET'
@@ -95,7 +98,7 @@ class WebServer {
                     throw new Error('No tokens received from Discord');
                 }
 
-                setDiscordTokens(decodedData.tokens);
+                this.monitor.setAuth(decodedData.tokens);
 
                 // Send HTML that closes the window and shows success
                 res.send(`
@@ -129,8 +132,7 @@ class WebServer {
             const { command } = req.body;
 
             if (command.startsWith('/test-message')) {
-                const tokens = getDiscordTokens();
-                if (!tokens) {
+                if (!this.monitor.isConnected()) {
                     res.json({ error: 'Not connected to Discord. Please authenticate first.' });
                     return;
                 }
@@ -195,13 +197,16 @@ class WebServer {
         });
     }
 
-    start(port = 3000) {
+    start() {
+        const port = configManager.get('server.clientPort');
+        const host = configManager.get('server.host');
+
         // Start the monitor
         this.monitor.start();
 
         // Start the web server
-        this.server.listen(port, () => {
-            console.log(`Web interface available at http://localhost:${port}`);
+        this.server.listen(port, host, () => {
+            console.log(`Web interface available at http://${host}:${port}`);
         });
     }
 

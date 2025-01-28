@@ -1,49 +1,13 @@
 const path = require('path');
 const fs = require('fs');
-const dotenv = require('dotenv');
 const { resolvePath } = require('./paths');
 const tokenStore = require('./tokenStore');
+const configManager = require('./config-manager');
 
 function loadConfig() {
-    // Load environment variables
-    const envPath = path.resolve(process.cwd(), '.env');
-    if (fs.existsSync(envPath)) {
-        dotenv.config({ path: envPath });
-    }
-
-    // Validate required variables
-    const requiredVars = [
-        'POE2_LOG_PATH',
-        'BOT_SERVER_URL',
-        'DISCORD_CLIENT_ID',
-        'CLIENT_PORT'
-    ];
-
-    const missingVars = requiredVars.filter(key => !process.env[key]);
-    if (missingVars.length > 0) {
-        throw new Error(
-            'Missing required environment variables:\n' +
-            missingVars.map(v => `  - ${v}`).join('\n') +
-            '\nPlease set these in your .env file'
-        );
-    }
-
     // Normalize paths based on OS
-    if (process.env.POE2_LOG_PATH) {
-        // First replace environment variables
-        process.env.POE2_LOG_PATH = process.env.POE2_LOG_PATH
-            .replace('%APPDATA%', process.env.APPDATA || '')
-            .replace('~', process.env.HOME || '');
-
-        // Then resolve the path using our path utility
-        process.env.POE2_LOG_PATH = resolvePath(process.env.POE2_LOG_PATH);
-        console.log('Normalized log path:', process.env.POE2_LOG_PATH);
-    }
-
-    // Normalize bot server URL (remove trailing slash)
-    if (process.env.BOT_SERVER_URL) {
-        process.env.BOT_SERVER_URL = process.env.BOT_SERVER_URL.replace(/\/$/, '');
-    }
+    const logPath = resolvePath(configManager.get('poe2.logPath'));
+    console.log('Normalized log path:', logPath);
 
     // Load tokens from disk
     let discordTokens = tokenStore.loadTokens();
@@ -68,7 +32,8 @@ function loadConfig() {
             throw new Error('No refresh token available');
         }
 
-        const response = await fetch(`${process.env.BOT_SERVER_URL}/auth/refresh`, {
+        const botServerUrl = configManager.get('discord.botServerUrl');
+        const response = await fetch(`${botServerUrl}/auth/refresh`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -91,10 +56,10 @@ function loadConfig() {
     }
 
     return {
-        logPath: process.env.POE2_LOG_PATH,
-        botServerUrl: process.env.BOT_SERVER_URL,
-        clientId: process.env.DISCORD_CLIENT_ID,
-        clientPort: process.env.CLIENT_PORT,
+        logPath: logPath,
+        botServerUrl: configManager.get('discord.botServerUrl'),
+        clientId: configManager.get('discord.clientId'),
+        clientPort: configManager.get('server.clientPort'),
         getDiscordTokens,
         setDiscordTokens,
         clearDiscordTokens,

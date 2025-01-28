@@ -15,10 +15,12 @@ class ConfigManager extends EventEmitter {
                 logPath: 'C:\\Program Files (x86)\\Grinding Gear Games\\Path of Exile 2\\logs\\Client.txt'
             },
             server: {
-                clientPort: 3000
+                clientPort: 3000,
+                host: 'localhost'
             },
             debug: {
-                enabled: false
+                enabled: false,
+                logLevel: 'info'
             }
         };
         this.config = null;
@@ -29,29 +31,68 @@ class ConfigManager extends EventEmitter {
         try {
             if (fs.existsSync(this.configPath)) {
                 const fileContent = fs.readFileSync(this.configPath, 'utf8');
-                this.config = JSON.parse(fileContent);
+                const loadedConfig = JSON.parse(fileContent);
+                // Deep merge with defaults to ensure all required fields exist
+                this.config = this.deepMerge(this.defaults, loadedConfig);
             } else {
+                console.log('No config file found, creating with defaults...');
                 this.config = { ...this.defaults };
                 this.save();
             }
         } catch (error) {
             console.error('Error loading config:', error);
+            console.log('Using default configuration...');
             this.config = { ...this.defaults };
             this.save();
         }
     }
 
+    deepMerge(target, source) {
+        const output = { ...target };
+        if (this.isObject(target) && this.isObject(source)) {
+            Object.keys(source).forEach(key => {
+                if (this.isObject(source[key])) {
+                    if (!(key in target)) {
+                        Object.assign(output, { [key]: source[key] });
+                    } else {
+                        output[key] = this.deepMerge(target[key], source[key]);
+                    }
+                } else {
+                    Object.assign(output, { [key]: source[key] });
+                }
+            });
+        }
+        return output;
+    }
+
+    isObject(item) {
+        return item && typeof item === 'object' && !Array.isArray(item);
+    }
+
     save() {
         try {
+            const configDir = path.dirname(this.configPath);
+            if (!fs.existsSync(configDir)) {
+                fs.mkdirSync(configDir, { recursive: true });
+            }
             fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
             this.emit('configChanged', this.config);
         } catch (error) {
             console.error('Error saving config:', error);
+            throw new Error(`Failed to save config: ${error.message}`);
         }
     }
 
     get(key) {
-        return key.split('.').reduce((obj, k) => obj && obj[k], this.config);
+        const value = key.split('.').reduce((obj, k) => obj && obj[k], this.config);
+        if (value === undefined) {
+            const defaultValue = key.split('.').reduce((obj, k) => obj && obj[k], this.defaults);
+            if (defaultValue !== undefined) {
+                this.set(key, defaultValue);
+                return defaultValue;
+            }
+        }
+        return value;
     }
 
     set(key, value) {
@@ -61,8 +102,11 @@ class ConfigManager extends EventEmitter {
             if (!(k in obj)) obj[k] = {};
             return obj[k];
         }, this.config);
-        target[lastKey] = value;
-        this.save();
+        
+        if (target[lastKey] !== value) {
+            target[lastKey] = value;
+            this.save();
+        }
     }
 
     getAll() {
@@ -72,6 +116,22 @@ class ConfigManager extends EventEmitter {
     reset() {
         this.config = { ...this.defaults };
         this.save();
+    }
+
+    validate() {
+        const required = [
+            'discord.clientId',
+            'discord.botServerUrl',
+            'poe2.logPath',
+            'server.clientPort'
+        ];
+
+        const missing = required.filter(key => !this.get(key));
+        if (missing.length > 0) {
+            throw new Error(`Missing required config values: ${missing.join(', ')}`);
+        }
+
+        return true;
     }
 }
 

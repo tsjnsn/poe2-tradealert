@@ -5,15 +5,26 @@ const EventEmitter = require('events');
 const { execSync } = require('child_process');
 const { resolvePath } = require('../utils/paths');
 const fetch = require('node-fetch');
+const { loadConfig } = require('../utils/config');
+const configManager = require('../utils/config-manager');
 
 class LogMonitor extends EventEmitter {
     constructor(logPath, options = {}) {
         super();
-        this.logPath = this.initializePath(logPath);
-        this.watcher = null;
-        this.lastPosition = null;
         this.webMode = options.webMode || false;
         this.authPrompted = false;
+        this.tokens = null;
+        this.watcher = null;
+        this.lastPosition = null;
+        
+        // Initialize config
+        this.initializeConfig();
+        
+        // Listen for config changes
+        configManager.on('configChanged', () => {
+            console.log('Config changed, updating monitor settings...');
+            this.updateConfig();
+        });
         
         // Statistics
         this.stats = {
@@ -29,6 +40,72 @@ class LogMonitor extends EventEmitter {
         if (!this.webMode) {
             setInterval(() => this.updateStats(), 1000);
         }
+    }
+
+    initializeConfig() {
+        const config = loadConfig();
+        this.logPath = this.initializePath(config.logPath);
+        this.botServerUrl = config.botServerUrl;
+        this.getDiscordTokens = config.getDiscordTokens;
+        this.setDiscordTokens = config.setDiscordTokens;
+        this.clearDiscordTokens = config.clearDiscordTokens;
+        this.refreshDiscordTokens = config.refreshDiscordTokens;
+    }
+
+    updateConfig() {
+        const config = loadConfig();
+        const newLogPath = this.initializePath(config.logPath);
+        
+        // If log path changed, update watcher
+        if (newLogPath !== this.logPath) {
+            console.log('Log path changed, updating watcher...');
+            this.logPath = newLogPath;
+            if (this.watcher) {
+                this.watcher.close();
+                this.setupWatcher();
+            }
+        }
+
+        // Update other config values
+        this.botServerUrl = config.botServerUrl;
+        this.getDiscordTokens = config.getDiscordTokens;
+        this.setDiscordTokens = config.setDiscordTokens;
+        this.clearDiscordTokens = config.clearDiscordTokens;
+        this.refreshDiscordTokens = config.refreshDiscordTokens;
+    }
+
+    setupWatcher() {
+        this.watcher = chokidar.watch(this.logPath, {
+            persistent: true,
+            usePolling: true,
+            interval: 100,
+            awaitWriteFinish: {
+                stabilityThreshold: 100,
+                pollInterval: 100
+            },
+            ignoreInitial: true
+        });
+
+        // Initialize last position
+        try {
+            const stats = fs.statSync(this.logPath);
+            this.lastPosition = stats.size;
+            if (!this.webMode) {
+                this.updateStats();
+            }
+        } catch (error) {
+            console.error('Error accessing log file:', error);
+            return;
+        }
+
+        // Watch for changes
+        this.watcher.on('change', (path) => {
+            this.processNewLines();
+        });
+
+        this.watcher.on('error', (error) => {
+            console.error('Watch error:', error);
+        });
     }
 
     moveCursorToStats() {
@@ -66,10 +143,9 @@ class LogMonitor extends EventEmitter {
         const linesPerSec = (this.stats.totalLinesProcessed / uptime).toFixed(2);
 
         // Check Discord auth status
-        const { getDiscordTokens, botServerUrl } = require('../utils/config').loadConfig();
-        const tokens = getDiscordTokens();
+        const tokens = this.getDiscordTokens();
         const authStatus = tokens ? '🟢 Connected to Discord' : '🔴 Not connected to Discord';
-        const authHelp = tokens ? '' : `  Click to connect or visit ${botServerUrl}/auth`;
+        const authHelp = tokens ? '' : `  Click to connect or visit ${this.botServerUrl}/auth`;
 
         // If not authenticated and not already prompted, emit event to open auth URL
         if (!tokens && !this.authPrompted) {
@@ -170,43 +246,11 @@ class LogMonitor extends EventEmitter {
             console.log('\nTrade messages will appear below:\n');
         }
         
-        // Create watcher
-        this.watcher = chokidar.watch(this.logPath, {
-            persistent: true,
-            usePolling: true,
-            interval: 100,
-            awaitWriteFinish: {
-                stabilityThreshold: 100,
-                pollInterval: 100
-            },
-            ignoreInitial: true
-        });
-
-        // Initialize last position
-        try {
-            const stats = fs.statSync(this.logPath);
-            this.lastPosition = stats.size;
-            if (!this.webMode) {
-                this.updateStats();
-            }
-        } catch (error) {
-            console.error('Error accessing log file:', error);
-            return;
-        }
-
-        // Watch for changes
-        this.watcher.on('change', (path) => {
-            this.processNewLines();
-        });
-
-        this.watcher.on('error', (error) => {
-            console.error('Watch error:', error);
-        });
+        this.setupWatcher();
     }
 
     async sendTradeAlert(player, message) {
-        const { getDiscordTokens, setDiscordTokens, refreshDiscordTokens, botServerUrl } = require('../utils/config').loadConfig();
-        const tokens = getDiscordTokens();
+        const tokens = this.getDiscordTokens();
         
         if (!tokens) {
             if (!this.webMode) {
@@ -218,8 +262,8 @@ class LogMonitor extends EventEmitter {
         }
 
         try {
-            console.log(`Sending trade alert to ${botServerUrl}/api/trade-alert`);
-            const response = await fetch(`${botServerUrl}/api/trade-alert`, {
+            console.log(`Sending trade alert to ${this.botServerUrl}/api/trade-alert`);
+            const response = await fetch(`${this.botServerUrl}/api/trade-alert`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -241,7 +285,7 @@ class LogMonitor extends EventEmitter {
             if (response.status === 401) {
                 console.log('Token expired, attempting refresh...');
                 try {
-                    await refreshDiscordTokens();
+                    await this.refreshDiscordTokens();
                     console.log('Token refreshed successfully, retrying alert...');
                     return this.sendTradeAlert(player, message);
                 } catch (refreshError) {
@@ -339,6 +383,20 @@ class LogMonitor extends EventEmitter {
         if (this.watcher) {
             this.watcher.close();
         }
+    }
+
+    isConnected() {
+        return !!this.getDiscordTokens();
+    }
+
+    setAuth(tokens) {
+        this.setDiscordTokens(tokens);
+        this.tokens = tokens;
+    }
+
+    clearAuth() {
+        this.clearDiscordTokens();
+        this.tokens = null;
     }
 }
 
