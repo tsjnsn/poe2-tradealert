@@ -289,15 +289,30 @@
                 });
         }, 1000);
 
-        const ws = new WebSocket('ws://' + location.host);
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'trade') {
-                const messageText = data.error 
-                    ? `Trade from ${data.player}: ${data.message}\n⚠️ ${data.error}`
-                    : `Trade from ${data.player}: ${data.message}`;
-                addMessage(messageText, data.error ? 'error' : 'trade');
-            }
+        // Replace WebSocket connection with SSE
+        const eventSource = new EventSource('/api/events');
+
+        eventSource.addEventListener('ping', (e) => {
+            console.log('Connected to server events');
+        });
+
+        eventSource.addEventListener('trade', (e) => {
+            const data = JSON.parse(e.data);
+            handleTradeMessage(data);
+        });
+
+        eventSource.addEventListener('config', (e) => {
+            const config = JSON.parse(e.data);
+            updateConfigDisplay(config);
+        });
+
+        eventSource.onerror = (error) => {
+            console.error('SSE Error:', error);
+            // Attempt to reconnect after a delay
+            setTimeout(() => {
+                eventSource.close();
+                window.location.reload();
+            }, 5000);
         };
 
         // Configuration management

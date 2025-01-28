@@ -1,5 +1,4 @@
 const express = require('express');
-const WebSocket = require('ws');
 const http = require('http');
 const path = require('path');
 const LogMonitor = require('../services/LogMonitor');
@@ -10,7 +9,6 @@ class WebServer {
     constructor() {
         this.app = express();
         this.server = http.createServer(this.app);
-        this.wss = new WebSocket.Server({ server: this.server });
         this.clients = new Set();
 
         // Validate configuration
@@ -22,6 +20,25 @@ class WebServer {
         // Serve static files
         this.app.use(express.static(path.join(__dirname)));
         this.app.use(express.json());
+
+        // SSE endpoint for real-time updates
+        this.app.get('/api/events', (req, res) => {
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            res.flushHeaders();
+
+            // Send an initial ping to establish connection
+            res.write('event: ping\ndata: connected\n\n');
+
+            // Add client to the set
+            this.clients.add(res);
+
+            // Remove client on connection close
+            req.on('close', () => {
+                this.clients.delete(res);
+            });
+        });
 
         // API routes
         this.app.get('/api/stats', (req, res) => {
@@ -174,12 +191,6 @@ class WebServer {
             res.json(configManager.getAll());
         });
 
-        // WebSocket handling
-        this.wss.on('connection', (ws) => {
-            this.clients.add(ws);
-            ws.on('close', () => this.clients.delete(ws));
-        });
-
         // Handle trade events
         this.monitor.on('trade', (tradeData) => {
             const message = {
@@ -189,12 +200,20 @@ class WebServer {
                 error: tradeData.error
             };
 
-            for (const client of this.clients) {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify(message));
-                }
-            }
+            this.broadcastEvent('trade', message);
         });
+
+        // Handle config changes
+        configManager.on('configChanged', (config) => {
+            this.broadcastEvent('config', config);
+        });
+    }
+
+    broadcastEvent(event, data) {
+        const eventMessage = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+        for (const client of this.clients) {
+            client.write(eventMessage);
+        }
     }
 
     start() {
@@ -212,6 +231,10 @@ class WebServer {
 
     stop() {
         this.monitor.stop();
+        // Close all SSE connections
+        for (const client of this.clients) {
+            client.end();
+        }
         this.server.close();
     }
 }
