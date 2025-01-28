@@ -1,0 +1,27 @@
+{
+  "name": "poe2-tradealert-client",
+  "version": "1.0.0",
+  "description": "Client application for Path of Exile 2 trade notifications",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=16",
+    "pnpm": ">=8"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test:monitor": "node src/test-monitor.js",
+    "test:message": "node src/test-message.js",
+    "test:scan": "node src/test-scan.js"
+  },
+  "dependencies": {
+    "chokidar": "^3.6.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "node-fetch": "^2.7.0",
+    "open": "^10.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

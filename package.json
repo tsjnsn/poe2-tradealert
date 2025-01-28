@@ -1,0 +1,20 @@
+{
+  "name": "poe2-tradealert-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Path of Exile 2 trade notification system",
+  "engines": {
+    "node": ">=16",
+    "pnpm": ">=8"
+  },
+  "scripts": {
+    "install:all": "pnpm install && cd client && pnpm install && cd ../server && pnpm install",
+    "start:server": "cd server && pnpm start",
+    "start:client": "cd client && pnpm start",
+    "dev:server": "cd server && pnpm dev",
+    "dev:client": "cd client && pnpm dev",
+    "test:monitor": "cd client && pnpm test:monitor",
+    "test:message": "cd client && pnpm test:message",
+    "test:scan": "cd client && pnpm test:scan"
+  }
+} 
