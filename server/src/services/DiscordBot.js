@@ -51,7 +51,10 @@ class DiscordBot {
         try {
             const user = await this.client.users.fetch(userId);
             if (user) {
-                const message = `🔔 New trade request from ${tradeData.player}:\n\`\`\`${tradeData.message}\`\`\``;
+                // Extract the actual message without the @From prefix
+                const messageMatch = tradeData.message.match(/@From [^:]+: (.+)/);
+                const cleanMessage = messageMatch ? messageMatch[1] : tradeData.message;
+                const message = `> ${cleanMessage}\n> -# @${tradeData.player}`;
                 await user.send(message);
             }
         } catch (error) {

@@ -183,45 +183,7 @@ class AuthServer {
         });
 
         // API endpoints
-        this.app.post('/api/trade-alert', async (req, res) => {
-            const authHeader = req.headers.authorization;
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                return res.status(401).send('No access token provided');
-            }
-
-            const accessToken = authHeader.split(' ')[1];
-
-            try {
-                // Validate token and get user info
-                const userResponse = await fetch('https://discord.com/api/users/@me', {
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
-                });
-
-                if (!userResponse.ok) {
-                    return res.status(401).send('Invalid access token');
-                }
-
-                const userData = await userResponse.json();
-                const userId = userData.id;
-
-                if (!this.discordBot.isUserLinked(userId)) {
-                    return res.status(403).send('Discord account not linked');
-                }
-
-                const { player, message } = req.body;
-                if (!player || !message) {
-                    return res.status(400).send('Missing required fields');
-                }
-
-                await this.discordBot.sendTradeAlert(userId, { player, message });
-                res.status(200).send('Alert sent successfully');
-            } catch (error) {
-                console.error('Error processing trade alert:', error);
-                res.status(500).send('Failed to process alert');
-            }
-        });
+        this.app.post('/api/trade-alert', (req, res) => this.handleTradeAlert(req, res));
 
         // Start server
         const port = parseInt(process.env.PORT) || 5050;
@@ -234,6 +196,45 @@ class AuthServer {
 
     generateApiKey() {
         return Buffer.from(Math.random().toString(36) + Date.now().toString()).toString('base64');
+    }
+
+    async handleTradeAlert(req, res) {
+        try {
+            const authHeader = req.headers.authorization;
+            if (!authHeader) {
+                return res.status(401).send('No authorization header');
+            }
+
+            const accessToken = authHeader.split(' ')[1];
+            const userResponse = await fetch('https://discord.com/api/users/@me', {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
+            });
+
+            if (!userResponse.ok) {
+                return res.status(401).send('Invalid Discord token');
+            }
+
+            const userData = await userResponse.json();
+            const userId = userData.id;
+
+            // Re-link user if they have valid tokens but aren't linked
+            if (!this.discordBot.isUserLinked(userId)) {
+                await this.discordBot.linkUser(userId);
+            }
+
+            const { player, message } = req.body;
+            if (!player || !message) {
+                return res.status(400).send('Missing required fields');
+            }
+
+            await this.discordBot.sendTradeAlert(userId, { player, message });
+            res.status(200).send('Alert sent successfully');
+        } catch (error) {
+            console.error('Trade alert error:', error);
+            res.status(500).send('Internal server error');
+        }
     }
 }
 

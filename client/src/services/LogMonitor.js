@@ -281,7 +281,7 @@ class LogMonitor extends EventEmitter {
     }
 
     async sendTestMessage() {
-        const testMessage = '[INFO Client 1234] @From TestTrader: Hi, I would like to buy your Test Item listed for 5 divine in Standard';
+        const testMessage = 'Hi, I would like to buy your Test Item listed for 5 divine in Standard';
         if (!this.webMode) {
             console.log('\n📨 Sending test trade alert...');
         }
@@ -320,8 +320,12 @@ class LogMonitor extends EventEmitter {
                         this.stats.tradeMessagesFound++;
                         this.stats.players.add(match[1]);
                         
+                        // Extract message keeping the @From part but removing the log prefix
+                        const messageMatch = line.match(/\[INFO Client \d+\] (@From .+)/);
+                        const cleanMessage = messageMatch ? messageMatch[1] : line.trim();
+                        
                         // Send trade alert to bot server
-                        this.sendTradeAlert(match[1], line.trim());
+                        this.sendTradeAlert(match[1], cleanMessage);
                     }
                 }
             }

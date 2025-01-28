@@ -136,9 +136,15 @@ class WebServer {
 
                 // Extract custom message if provided
                 const match = command.match(/^\/test-message\s*"([^"]+)"/);
-                const message = match ? match[1] : 'Test Item listed for 5 divine in Standard';
+                const baseMessage = match ? match[1] : 'Hi, I would like to buy your Test Item listed for 5 divine in Standard';
+                const clientId = Math.floor(Math.random() * 90000) + 10000; // Random 5-digit number
+                const fullMessage = `[INFO Client ${clientId}] @From TestTrader: ${baseMessage}`;
                 
-                this.monitor.sendTradeAlert('TestTrader', `[INFO Client 1234] @From TestTrader: Hi, I would like to buy your ${message}`);
+                // Extract the clean message part (same as LogMonitor)
+                const messageMatch = fullMessage.match(/\[INFO Client \d+\] (@From .+)/);
+                const cleanMessage = messageMatch ? messageMatch[1] : fullMessage.trim();
+                
+                this.monitor.sendTradeAlert('TestTrader', cleanMessage);
                 res.json({ message: 'Test trade alert sent.' });
                 return;
             }
