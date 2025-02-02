@@ -1,0 +1,50 @@
+{
+  "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
+  "applicationId": "com.poe.tradealert.app",
+  "version": "1.0.0",
+  "defaultMode": "window",
+  "port": 1420,
+  "documentRoot": "dist",
+  "url": "/",
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "tokenSecurity": "one-time",
+  "logging": {
+    "enabled": true,
+    "writeToLogFile": true
+  },
+  "nativeAllowList": [
+    "app.*",
+    "os.*",
+    "filesystem.*",
+    "window.*",
+    "debug.log"
+  ],
+  "modes": {
+    "window": {
+      "title": "POE2 Trade Alert",
+      "width": 800,
+      "height": 600,
+      "minWidth": 400,
+      "minHeight": 300,
+      "center": true,
+      "resizable": true,
+      "icon": "assets/icon.ico",
+      "enableInspector": false
+    }
+  },
+  "cli": {
+    "binaryName": "poe2-tradealert",
+    "resourcesPath": "dist",
+    "extensionsPath": "extensions",
+    "clientLibrary": "node_modules/@neutralinojs/lib/dist/neutralino.js",
+    "binaryVersion": "5.6.0",
+    "clientVersion": "5.6.0",
+    "distributionPath": "dist"
+  },
+  "applicationName": "POE2 Trade Alert",
+  "applicationIcon": "assets/icon.ico",
+  "author": "Your Name",
+  "description": "Path of Exile 2 Trade Notification System",
+  "copyright": "Copyright © 2024 Your Name"
+} 
