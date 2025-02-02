@@ -1,6 +1,6 @@
-const { loadConfig } = require('./utils/config');
-const DiscordBot = require('./services/DiscordBot');
-const AuthServer = require('./services/AuthServer');
+import { loadConfig } from './utils/config.js';
+import DiscordBot from './services/DiscordBot.js';
+import AuthServer from './services/AuthServer.js';
 
 // Track connections for graceful shutdown
 const connections = new Set();

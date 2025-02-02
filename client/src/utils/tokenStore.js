@@ -1,17 +1,12 @@
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const { resolvePath } = require('./paths');
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import { resolvePath } from './paths';
 
 class TokenStore {
     constructor() {
-        // Store tokens in user's config directory
-        const configDir = process.env.APPDATA || 
-            (process.platform === 'darwin' ? path.join(process.env.HOME, 'Library', 'Application Support') : 
-            path.join(process.env.HOME, '.config'));
-        
-        this.configPath = path.join(configDir, 'poe2-tradealert');
-        this.tokenPath = path.join(this.configPath, 'discord_tokens.json');
+        this.configPath = Neutralino.filesystem.getPath('config');
+        this.tokenPath = Neutralino.filesystem.join(this.configPath, 'discord_tokens.json');
         this.encryptionKey = this.getEncryptionKey();
         
         // Ensure config directory exists
@@ -22,13 +17,13 @@ class TokenStore {
 
     // Get or create a stable encryption key
     getEncryptionKey() {
-        const keyPath = path.join(this.configPath, '.key');
+        const keyPath = Neutralino.filesystem.join(this.configPath, '.key');
         try {
-            if (fs.existsSync(keyPath)) {
-                return fs.readFileSync(keyPath, 'utf8');
+            if (Neutralino.filesystem.exists(keyPath)) {
+                return Neutralino.filesystem.readFile(keyPath);
             } else {
-                const key = crypto.randomBytes(32).toString('hex');
-                fs.writeFileSync(keyPath, key, { mode: 0o600 });
+                const key = Neutralino.crypto.randomBytes(32).toString('hex');
+                Neutralino.filesystem.writeFile(keyPath, key, { mode: 0o600 });
                 return key;
             }
         } catch (error) {
@@ -110,4 +105,4 @@ class TokenStore {
     }
 }
 
-module.exports = new TokenStore(); 
+export default new TokenStore(); 

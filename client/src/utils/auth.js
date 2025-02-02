@@ -1,15 +1,9 @@
-const http = require('http');
-const { parse } = require('url');
+import http from 'http';
+import { parse } from 'url';
 
 async function getAvailablePort() {
-    return new Promise((resolve, reject) => {
-        const server = http.createServer();
-        server.listen(0, () => {
-            const { port } = server.address();
-            server.close(() => resolve(port));
-        });
-        server.on('error', reject);
-    });
+    const port = await Neutralino.os.getAvailablePort();
+    return port;
 }
 
 async function waitForCallback() {
@@ -212,4 +206,4 @@ async function waitForCallback() {
     };
 }
 
-module.exports = { waitForCallback }; 
+export { waitForCallback }; 

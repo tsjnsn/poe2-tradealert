@@ -1,5 +1,5 @@
-const express = require('express');
-const fetch = require('node-fetch');
+import express from 'express';
+import fetch from 'node-fetch';
 
 class AuthServer {
     constructor(discordBot) {
@@ -238,4 +238,4 @@ class AuthServer {
     }
 }
 
-module.exports = AuthServer; 
+export default AuthServer; 

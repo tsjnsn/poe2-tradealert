@@ -1,11 +1,14 @@
-const fs = require('fs');
-const path = require('path');
-const EventEmitter = require('events');
+import { filesystem, events } from '@neutralinojs/lib';
 
-class ConfigManager extends EventEmitter {
+class ConfigManager {
     constructor() {
-        super();
-        this.configPath = path.join(process.cwd(), 'config.json');
+        if (!window.NL_PATH) {
+            throw new Error('Neutralino environment not initialized');
+        }
+        
+        // Normalize path separators for cross-platform compatibility
+        this.configPath = `${window.NL_PATH.replace(/\\/g, '/')}/config.json`;
+        
         this.defaults = {
             discord: {
                 clientId: '1333582185478885489',
@@ -27,23 +30,22 @@ class ConfigManager extends EventEmitter {
         this.load();
     }
 
-    load() {
+    async load() {
         try {
-            if (fs.existsSync(this.configPath)) {
-                const fileContent = fs.readFileSync(this.configPath, 'utf8');
-                const loadedConfig = JSON.parse(fileContent);
-                // Deep merge with defaults to ensure all required fields exist
-                this.config = this.deepMerge(this.defaults, loadedConfig);
-            } else {
-                console.log('No config file found, creating with defaults...');
-                this.config = { ...this.defaults };
-                this.save();
-            }
+            await filesystem.getStats(this.configPath);
+            const fileContent = await filesystem.readFile(this.configPath);
+            const loadedConfig = JSON.parse(fileContent);
+            this.config = this.deepMerge(this.defaults, loadedConfig);
         } catch (error) {
+            if(error.code === 'NE_FS_NOPATHE') {
+                console.log('Creating new config with defaults...');
+                this.config = { ...this.defaults };
+                await this.save();
+            }
             console.error('Error loading config:', error);
             console.log('Using default configuration...');
             this.config = { ...this.defaults };
-            this.save();
+            await this.save();
         }
     }
 
@@ -69,14 +71,14 @@ class ConfigManager extends EventEmitter {
         return item && typeof item === 'object' && !Array.isArray(item);
     }
 
-    save() {
+    async save() {
         try {
-            const configDir = path.dirname(this.configPath);
-            if (!fs.existsSync(configDir)) {
-                fs.mkdirSync(configDir, { recursive: true });
-            }
-            fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
-            this.emit('configChanged', this.config);
+            const configDir = this.configPath.substring(0, this.configPath.lastIndexOf('/'));
+            
+            await filesystem.createDirectory(configDir, { recursive: true });
+            
+            await filesystem.writeFile(this.configPath, JSON.stringify(this.config, null, 2));
+            await events.broadcast('configChanged', this.config);
         } catch (error) {
             console.error('Error saving config:', error);
             throw new Error(`Failed to save config: ${error.message}`);
@@ -133,6 +135,13 @@ class ConfigManager extends EventEmitter {
 
         return true;
     }
+
+    async validatePaths() {
+        const parts = await filesystem.getPathParts(this.config.poe2.logPath);
+        if(!parts.isFile) {
+            throw new Error('POE2 log path must be a file');
+        }
+    }
 }
 
-module.exports = new ConfigManager(); 
+export default new ConfigManager();
