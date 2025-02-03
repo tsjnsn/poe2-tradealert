@@ -23,6 +23,9 @@
     "storage.*",
     "debug.log"
   ],
+  "allowedOrigins": [
+    "*"
+  ],
   "modes": {
     "window": {
       "title": "POE Trade Alerts",

@@ -1,5 +1,4 @@
-import { Neutralino } from '@neutralinojs/lib';
-import { resolvePath } from './paths';
+import Neutralino from '@neutralinojs/lib';
 
 class TokenStore {
     constructor() {

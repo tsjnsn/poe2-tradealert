@@ -1,11 +1,20 @@
-import express from 'express';
-import fetch from 'node-fetch';
+const express = require('express');
+const fetch = require('node-fetch');
+const cors = require('cors');
 
 class AuthServer {
     constructor(discordBot) {
         this.app = express();
         this.discordBot = discordBot;
         
+        // Enable CORS - Reflect requesting origin
+        this.app.use(cors({
+            origin: true,
+            methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+            allowedHeaders: '*',
+            credentials: true
+        }));
+
         // Parse JSON bodies
         this.app.use(express.json());
 
@@ -238,4 +247,4 @@ class AuthServer {
     }
 }
 
-export default AuthServer; 
+module.exports = AuthServer; 

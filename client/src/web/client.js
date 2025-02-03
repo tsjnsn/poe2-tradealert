@@ -1,12 +1,12 @@
 // Initialize Neutralino
-import { events, filesystem, os } from '@neutralinojs/lib';
+import Neutralino from '@neutralinojs/lib';
 import { LogMonitor } from '../services/LogMonitor.js';
 import ConfigManager from '../utils/config-manager.js';
 
 let monitor;
 let configManager;
 
-events.on('configChanged', ({ detail: config }) => {
+Neutralino.events.on('configChanged', ({ detail: config }) => {
     console.log('Restarting log monitor...');
     monitor.restart(config)
 
@@ -14,7 +14,7 @@ events.on('configChanged', ({ detail: config }) => {
 });
 
 // Initialize when the document is ready
-events.on('ready', async () => {
+Neutralino.events.on('ready', async () => {
     console.log('Application ready event received');
     
     try {
@@ -48,20 +48,20 @@ events.on('ready', async () => {
 });
 
 function setupEventHandlers(configManager, monitor) {
-    // Handle trade events
-    events.on('trade', ({ detail: data }) => {
+    // Handle trade Neutralino.events
+    Neutralino.events.on('trade', ({ detail: data }) => {
         handleTradeEvent(data);
     });
     
     // Handle config changes
-    events.on('configChanged', ({ detail: config }) => {
+    Neutralino.events.on('configChanged', ({ detail: config }) => {
         handleConfigEvent(config);
     });
     
     // Handle window close
-    events.on('windowClose', async () => {
+    Neutralino.events.on('windowClose', async () => {
         monitor.stop();
-        await events.exit();
+        await Neutralino.events.exit();
     });
 }
 
@@ -113,7 +113,7 @@ async function updateStats() {
 async function authenticate() {
     try {
         const botServerUrl = configManager.get('discord.botServerUrl');
-        const response = await Neutralino.net.fetch(`${botServerUrl}/auth`);
+        const response = await fetch(`${botServerUrl}/auth`);
         const data = await response.json();
         
         if (!data.url) {
@@ -251,11 +251,11 @@ async function resetConfig() {
 async function checkAuth() {
     try {
         const botServerUrl = configManager.get('discord.botServerUrl');
-        const response = await Neutralino.net.fetch(`${botServerUrl}/auth/check`);
+        const response = await fetch(`${botServerUrl}/auth/check`);
         const data = await response.json();
         
         if (data.authenticated) {
-            const userResponse = await Neutralino.net.fetch(`${botServerUrl}/auth/user`);
+            const userResponse = await fetch(`${botServerUrl}/auth/user`);
             const userData = await userResponse.json();
             updateUserInfo(userData);
         } else {
