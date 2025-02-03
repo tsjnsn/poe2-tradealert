@@ -3,7 +3,7 @@
   "applicationId": "com.poe.tradealert.app",
   "version": "1.0.0",
   "defaultMode": "window",
-  "port": 1420,
+  "port": 0,
   "documentRoot": "/dist",
   "url": "/",
   "enableServer": true,

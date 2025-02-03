@@ -1,55 +1,12 @@
 import { defineConfig } from 'vite'
 import { fileURLToPath } from 'url'
 import path from 'path'
-import fs from 'fs/promises';
+import tailwindcss from '@tailwindcss/vite'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// const neutralino = () => {
-//   let config;
-
-//   return {
-//     name: 'neutralino',
-
-//     configResolved(resolvedConfig) {
-//       config = resolvedConfig;
-//     },
-
-//     async transformIndexHtml(html) {
-//       const regex =
-//         /<script src="http:\/\/localhost:(\d+)\/__neutralino_globals\.js"><\/script>/;
-
-//       if (config.mode === 'production') {
-//         return html.replace(
-//           regex,
-//           '<script src="%PUBLIC_URL%/__neutralino_globals.js"></script>'
-//         );
-//       }
-
-//       if (config.mode === 'development') {
-//         const auth_info_file = await fs.readFile(
-//           path.join(__dirname, 'auth_info.json'),
-//           {
-//             encoding: 'utf-8',
-//           }
-//         );
-
-//         const auth_info = JSON.parse(auth_info_file);
-//         const port = auth_info.port;
-
-//         return html.replace(
-//           regex,
-//           `<script src="http://localhost:1240/__neutralino_globals.js"></script>`
-//         );
-//       }
-
-//       return html;
-//     },
-//   };
-// };
-
 export default defineConfig({
-  plugins: [],
+  plugins: [tailwindcss()],
   root: 'src/web',
   base: './',
   build: {

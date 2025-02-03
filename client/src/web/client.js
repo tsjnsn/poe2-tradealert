@@ -2,14 +2,16 @@
 import Neutralino from '@neutralinojs/lib';
 import { LogMonitor } from '../services/LogMonitor.js';
 import ConfigManager from '../utils/config-manager.js';
+import { WebConsole } from './console.js';
+import '../styles/style.css'
 
 let monitor;
 let configManager;
+let webConsole;
 
 Neutralino.events.on('configChanged', ({ detail: config }) => {
     console.log('Restarting log monitor...');
     monitor.restart(config)
-
     updateConfigDisplay(config);
 });
 
@@ -18,6 +20,9 @@ Neutralino.events.on('ready', async () => {
     console.log('Application ready event received');
     
     try {
+        // Initialize web console
+        webConsole = new WebConsole('console');
+        
         console.log('Initializing config manager...');
         configManager = new ConfigManager();
         await configManager.load();
@@ -67,13 +72,11 @@ function setupEventHandlers(configManager, monitor) {
 
 function handleTradeEvent(data) {
     const { player, message, error } = data;
-    const consoleEl = document.getElementById('console');
-    
     let messageText = error 
         ? `Error: ${error}`
         : `Trade request from ${player}: ${message}`;
         
-    addMessage(messageText, error ? 'error' : 'trade');
+    webConsole.addMessage(messageText, error ? 'error' : 'trade');
 }
 
 function handleConfigEvent(config) {
@@ -127,72 +130,17 @@ async function authenticate() {
             throw new Error(`Failed to open authentication window: ${windowError.message}`);
         }
     } catch (error) {
-        addMessage('Error starting authentication: ' + error.message, 'error');
+        webConsole.addMessage('Error starting authentication: ' + error.message, 'error');
     }
 }
 
 async function logout() {
     monitor.clearAuth();
-    addMessage('Logged out successfully', 'system');
+    webConsole.addMessage('Logged out successfully', 'system');
 }
 
 async function handleCommand(command) {
-    if (command === '/help') {
-        const commands = {
-            '/help': 'Show available commands',
-            '/test-message': 'Send a test trade message',
-            '/clear': 'Clear the console'
-        };
-        
-        Object.entries(commands).forEach(([cmd, desc]) => {
-            addMessage(`${cmd}: ${desc}`);
-        });
-        return;
-    }
-    
-    if (command === '/clear') {
-        document.getElementById('console').innerHTML = '';
-        return;
-    }
-    
-    if (command.startsWith('/test-message')) {
-        if (!monitor.isConnected()) {
-            addMessage('Not connected to Discord. Please authenticate first.', 'error');
-            return;
-        }
-        
-        const match = command.match(/^\/test-message\s*"([^"]+)"/);
-        const message = match ? match[1] : 'Hi, I would like to buy your Test Item listed for 5 divine in Standard';
-        
-        monitor.sendTradeAlert('TestTrader', message);
-        addMessage('Test trade alert sent.', 'system');
-        return;
-    }
-    
-    addMessage('Unknown command. Type /help for available commands.', 'error');
-}
-
-function addMessage(text, type = 'system') {
-    const console = document.getElementById('console');
-    const message = document.createElement('div');
-    
-    let classes = 'py-1 px-2 rounded';
-    switch(type) {
-        case 'trade':
-            classes += ' bg-blue-900/30';
-            break;
-        case 'error':
-            classes += ' text-red-400';
-            break;
-        case 'system':
-            classes += ' text-gray-400 italic';
-            break;
-    }
-    
-    message.className = classes;
-    message.textContent = text;
-    console.appendChild(message);
-    console.scrollTop = console.scrollHeight;
+    await webConsole.handleCommand(command, monitor, configManager);
 }
 
 async function loadConfig() {
@@ -231,16 +179,16 @@ async function updateConfigDisplay(config) {
 async function updateConfig(key, value) {
     try {
         configManager.set(key, value);
-        addMessage(`Updated ${key} = ${value}`, 'system');
+        webConsole.addMessage(`Updated ${key} = ${value}`, 'system');
     } catch (error) {
-        addMessage(`Error updating config: ${error.message}`, 'error');
+        webConsole.addMessage(`Error updating config: ${error.message}`, 'error');
     }
 }
 
 async function resetConfig() {
     configManager.reset();
     loadConfig();
-    addMessage('Configuration reset to defaults', 'system');
+    webConsole.addMessage('Configuration reset to defaults', 'system');
 }
 
 async function checkAuth() {
@@ -257,7 +205,13 @@ async function checkAuth() {
             showLogin();
         }
     } catch (error) {
-        addMessage('Error checking authentication: ' + error.message, 'error');
+        webConsole.addMessage('Error checking authentication: ' + error.message, 'error');
+    }
+}
+
+function toggleConsole() {
+    if (webConsole) {
+        webConsole.toggle();
     }
 }
 
@@ -270,5 +224,6 @@ Object.assign(window, {
     logout,
     handleCommand,
     updateConfig,
-    resetConfig
+    resetConfig,
+    toggleConsole
 });
