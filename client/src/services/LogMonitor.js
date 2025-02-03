@@ -1,40 +1,17 @@
 import Neutralino from '@neutralinojs/lib';
 
-// Simple EventEmitter implementation for browser
-class EventEmitter {
-    constructor() {
-        this.events = {};
-    }
-
-    on(event, listener) {
-        if (!this.events[event]) {
-            this.events[event] = [];
-        }
-        this.events[event].push(listener);
-        return () => this.off(event, listener);
-    }
-
-    off(event, listener) {
-        if (!this.events[event]) return;
-        this.events[event] = this.events[event].filter(l => l !== listener);
-    }
-
-    emit(event, ...args) {
-        if (!this.events[event]) return;
-        this.events[event].forEach(listener => listener(...args));
-    }
-}
-
-export class LogMonitor extends EventEmitter {
-    constructor(logPath, options = {}) {
-        super();
-        this.logPath = logPath;
-        this.webMode = options.webMode || false;
-        this.botServerUrl = options.botServerUrl || 'http://localhost:5050';
-        this.discordTokens = null;
+export class LogMonitor {
+    constructor(configManager, options = {}) {
+        this.configManager = configManager;
+        this.logPath = configManager.get('poe2.logPath');
+        this.botServerUrl = configManager.get('discord.botServerUrl') || 'http://localhost:5050';
         this.watchInterval = null;
         this.lastPosition = 0;
         this.stats = this.createStats();
+    }
+
+    isConnected() {
+        return this.configManager.get('discord.accessToken') !== null;
     }
 
     createStats() {
@@ -54,11 +31,10 @@ export class LogMonitor extends EventEmitter {
             const stats = await Neutralino.filesystem.getStats(this.logPath);
             this.lastPosition = stats.size;
             
-            // Simple interval-based watching
+            // Start the interval
             this.watchInterval = setInterval(() => this.checkLog(), 100);
         } catch (error) {
             console.error('Failed to start monitoring:', error);
-            this.emit('error', error);
         }
     }
 
@@ -74,15 +50,14 @@ export class LogMonitor extends EventEmitter {
             const stats = await Neutralino.filesystem.getStats(this.logPath);
             if (stats.size > this.lastPosition) {
                 const data = await Neutralino.filesystem.readFile(this.logPath, {
-                    position: this.lastPosition,
-                    length: stats.size - this.lastPosition
+                    pos: this.lastPosition,
+                    size: stats.size - this.lastPosition
                 });
                 this.lastPosition = stats.size;
                 this.processLines(data);
             }
         } catch (error) {
             console.error('Error checking log:', error);
-            this.emit('error', error);
             this.stop();
         }
     }
@@ -116,19 +91,12 @@ export class LogMonitor extends EventEmitter {
     }
 
     async sendTradeAlert(player, message) {
-        const tokens = this.getDiscordTokens();
-        
-        if (!tokens) {
-            if (!this.webMode) {
-                console.log('No Discord tokens available. Trade alert will only be shown locally.');
-                console.log(`Trade request from ${player}: ${message}`);
-            }
-            this.emit('trade', { player, message, error: 'Not connected to Discord' });
-            return;
+        const tokens = {
+            access_token: this.configManager.get('discord.accessToken'),
         }
 
         try {
-            const response = await Neutralino.net.fetch(`${this.botServerUrl}/api/trade-alert`, {
+            const response = await fetch(`${this.botServerUrl}/api/trade-alert`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -145,7 +113,6 @@ export class LogMonitor extends EventEmitter {
                     return this.sendTradeAlert(player, message);
                 } catch (refreshError) {
                     console.log('Token refresh failed:', refreshError);
-                    this.emit('trade', { player, message, error: 'Discord session expired' });
                     return;
                 }
             }
@@ -155,84 +122,21 @@ export class LogMonitor extends EventEmitter {
             if (!response.ok) {
                 if (data.error === 'Cannot send messages to this user') {
                     const error = 'Cannot send Discord DMs. Please enable DMs from server members in your Discord privacy settings.';
-                    this.emit('trade', { player, message, error });
+                    console.error({ player, message, error });
                     return;
                 }
                 throw new Error(data.error || 'Failed to send trade alert');
             }
 
             console.log('Trade alert sent successfully');
-            this.emit('trade', { player, message });
             
         } catch (error) {
             console.log('Error sending trade alert:', error);
-            this.emit('trade', { player, message, error: error.message });
         }
     }
 
     async refreshDiscordTokens() {
-        if (!this.discordTokens?.refresh_token) {
-            throw new Error('No refresh token available');
-        }
-
-        const response = await Neutralino.net.fetch(`${this.botServerUrl}/api/auth/refresh`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                refresh_token: this.discordTokens.refresh_token
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to refresh token');
-        }
-
-        const tokens = await response.json();
-        this.setAuth(tokens);
-        return tokens;
-    }
-
-    async setAuth(tokens) {
-        this.discordTokens = tokens;
-        this.isDiscordConnected = !!tokens;
-        try {
-            // Store tokens securely using Neutralino storage
-            await Neutralino.storage.setData('discord_tokens', JSON.stringify(tokens));
-        } catch (error) {
-            console.error('Failed to store auth tokens:', error);
-            throw new Error('Failed to save authentication data');
-        }
-    }
-
-    async clearAuth() {
-        this.discordTokens = null;
-        this.isDiscordConnected = false;
-        try {
-            await Neutralino.storage.removeData('discord_tokens');
-        } catch (error) {
-            console.error('Failed to clear auth tokens:', error);
-        }
-    }
-
-    getDiscordTokens() {
-        if (!this.discordTokens) {
-            try {
-                const stored = Neutralino.storage.getData('discord_tokens');
-                if (stored) {
-                    this.discordTokens = JSON.parse(stored);
-                    this.isDiscordConnected = true;
-                }
-            } catch (error) {
-                console.error('Failed to retrieve auth tokens:', error);
-                return null;
-            }
-        }
-        return this.discordTokens;
-    }
-
-    isConnected() {
-        return this.isDiscordConnected;
+        // TODO: Implement refresh
+        throw new Error('Token refresh not implemented');
     }
 }

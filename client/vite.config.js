@@ -15,7 +15,8 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'src/web/index.html')
+        main: path.resolve(__dirname, 'src/web/index.html'),
+        auth: path.resolve(__dirname, 'src/web/auth.html')
       },
       output: {
         entryFileNames: 'assets/[name].js',

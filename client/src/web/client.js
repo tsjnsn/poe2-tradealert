@@ -4,6 +4,7 @@ import { LogMonitor } from '../services/LogMonitor.js';
 import ConfigManager from '../utils/config-manager.js';
 import { WebConsole } from './console.js';
 import '../styles/style.css'
+import { Auth } from '../utils/auth.js';
 
 let monitor;
 let configManager;
@@ -28,14 +29,15 @@ Neutralino.events.on('ready', async () => {
         await configManager.load();
         console.log('Config manager initialized successfully');
         
+        // Initialize auth with configManager
+        const auth = new Auth(configManager);
+        
         console.log('Creating log monitor instance...');
-        const logPath = configManager.get('poe2.logPath');
-        console.log(`Using log path: ${logPath}`);
-        monitor = new LogMonitor(logPath, { webMode: false });
+        monitor = new LogMonitor(configManager);
         console.log('Log monitor created successfully');
         
         console.log('Setting up event handlers...');
-        setupEventHandlers(configManager, monitor);
+        setupEventHandlers(monitor);
         console.log('Event handlers setup complete');
         
         console.log('Initializing UI state...');
@@ -52,7 +54,7 @@ Neutralino.events.on('ready', async () => {
     }
 });
 
-function setupEventHandlers(configManager, monitor) {
+function setupEventHandlers(monitor) {
     // Handle trade Neutralino.events
     Neutralino.events.on('trade', ({ detail: data }) => {
         handleTradeEvent(data);
@@ -116,7 +118,7 @@ async function updateStats() {
 async function authenticate() {
     try {
         const botServerUrl = configManager.get('discord.botServerUrl');
-        const response = await fetch(`${botServerUrl}/auth?redirect_uri=${window.location.origin}`);
+        const response = await fetch(`${botServerUrl}/auth?redirect_uri=${window.location.origin}/auth.html`);
         const data = await response.json();
         
         if (!data.url) {

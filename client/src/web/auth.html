@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Callback</title>
+    <script src="./__neutralino_globals.js"></script>
+    <script type="module" src="./init.js" defer></script>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto max-w-3xl p-5">
+        <div id="auth-status" class="flex items-center justify-center p-3 mb-4 rounded-lg bg-gray-50">
+            <span id="status-text" class="text-gray-900">Processing authentication...</span>
+        </div>
+    </div>
+
+    <script type="module">
+        import Neutralino from '@neutralinojs/lib';
+
+        // Initialize when the document is ready
+        Neutralino.events.on('ready', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const data = urlParams.get('data');
+            
+            if (!data) {
+                document.getElementById('status-text').textContent = 'Error: No authentication data received';
+                return;
+            }
+
+            try {
+                Neutralino.events.broadcast('auth-callback', data);
+                // Close the window after successful auth
+                window.close(); // Scripts may close only the windows that were opened by them.
+            } catch (error) {
+                document.getElementById('status-text').textContent = `Error: ${error.message}`;
+                console.error('Authentication error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
