@@ -1,45 +1,67 @@
 // Initialize Neutralino
-import { init, events, filesystem, os } from '@neutralinojs/lib';
+import { events, filesystem, os } from '@neutralinojs/lib';
 import { LogMonitor } from '../services/LogMonitor.js';
 import ConfigManager from '../utils/config-manager.js';
 
 let monitor;
 let configManager;
 
-// Initialize when the document is ready
-events.on('ready', async () => {
-    // Initialize config and monitor
-    configManager = new ConfigManager();
-    await configManager.load();
-    
-    monitor = new LogMonitor(configManager.get('poe2.logPath'), { webMode: false });
-    
-    // Set up event handlers
-    setupEventHandlers();
-    
-    // Initialize the UI state
-    updateStats();
-    loadConfig();
-    
-    // Start monitoring
-    monitor.start();
+events.on('configChanged', ({ detail: config }) => {
+    console.log('Restarting log monitor...');
+    monitor.restart(config)
+
+    updateConfigDisplay(config);
 });
 
-function setupEventHandlers() {
+// Initialize when the document is ready
+events.on('ready', async () => {
+    console.log('Application ready event received');
+    
+    try {
+        console.log('Initializing config manager...');
+        configManager = new ConfigManager();
+        await configManager.load();
+        console.log('Config manager initialized successfully');
+        
+        console.log('Creating log monitor instance...');
+        const logPath = configManager.get('poe2.logPath');
+        console.log(`Using log path: ${logPath}`);
+        monitor = new LogMonitor(logPath, { webMode: false });
+        console.log('Log monitor created successfully');
+        
+        console.log('Setting up event handlers...');
+        setupEventHandlers(configManager, monitor);
+        console.log('Event handlers setup complete');
+        
+        console.log('Initializing UI state...');
+        updateStats();
+        loadConfig();
+        console.log('UI state initialized');
+        
+        console.log('Starting log monitor...');
+        monitor.start();
+        console.log('Log monitor started successfully');
+    } catch (error) {
+        console.error('Error during initialization:', error);
+        throw error;
+    }
+});
+
+function setupEventHandlers(configManager, monitor) {
     // Handle trade events
-    monitor.on('trade', (data) => {
+    events.on('trade', ({ detail: data }) => {
         handleTradeEvent(data);
     });
     
     // Handle config changes
-    configManager.on('configChanged', (config) => {
+    events.on('configChanged', ({ detail: config }) => {
         handleConfigEvent(config);
     });
     
     // Handle window close
-    events.on('windowClose', () => {
+    events.on('windowClose', async () => {
         monitor.stop();
-        events.exit();
+        await events.exit();
     });
 }
 
@@ -55,6 +77,7 @@ function handleTradeEvent(data) {
 }
 
 function handleConfigEvent(config) {
+    console.log('Config event received:', config);
     updateConfigDisplay(config);
 }
 
@@ -90,19 +113,24 @@ async function updateStats() {
 async function authenticate() {
     try {
         const botServerUrl = configManager.get('discord.botServerUrl');
-        const response = await fetch(`${botServerUrl}/auth`);
+        const response = await Neutralino.net.fetch(`${botServerUrl}/auth`);
         const data = await response.json();
         
         if (!data.url) {
             throw new Error('No auth URL in response');
         }
         
-        // Open auth window
-        Neutralino.window.create(data.url, {
-            title: 'Discord Authentication',
-            width: 600,
-            height: 800
-        });
+        try {
+            // Open auth window
+            await Neutralino.window.create(data.url, {
+                title: 'Discord Authentication',
+                width: 600,
+                height: 800,
+                center: true
+            });
+        } catch (windowError) {
+            throw new Error(`Failed to open authentication window: ${windowError.message}`);
+        }
     } catch (error) {
         addMessage('Error starting authentication: ' + error.message, 'error');
     }
@@ -248,4 +276,4 @@ Object.assign(window, {
     handleCommand,
     updateConfig,
     resetConfig
-}); 
+});

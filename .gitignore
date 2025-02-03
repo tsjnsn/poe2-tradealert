@@ -45,3 +45,4 @@ client/dist/
 src-old/
 .next/
 out/
+.tmp/

@@ -1,5 +1,4 @@
-import { filesystem, os } from '@neutralinojs/lib';
-import { Neutralino } from '@neutralinojs/lib';
+import Neutralino from '@neutralinojs/lib';
 
 // Simple EventEmitter implementation for browser
 class EventEmitter {
@@ -31,11 +30,15 @@ export class LogMonitor extends EventEmitter {
         super();
         this.logPath = logPath;
         this.webMode = options.webMode || false;
-        this.botServerUrl = options.botServerUrl || 'http://localhost:3000';
+        this.botServerUrl = options.botServerUrl || 'http://localhost:5050';
         this.discordTokens = null;
-        this.watching = false;
+        this.watchInterval = null;
         this.lastPosition = 0;
-        this.stats = {
+        this.stats = this.createStats();
+    }
+
+    createStats() {
+        return {
             startTime: new Date(),
             totalLinesProcessed: 0,
             tradeMessagesFound: 0,
@@ -44,23 +47,15 @@ export class LogMonitor extends EventEmitter {
     }
 
     async start() {
-        if (this.watching) return;
+        if (this.watchInterval) return;
         
         try {
-            // Ensure log file exists
-            const exists = await filesystem.getStats(this.logPath);
-            if (!exists) {
-                throw new Error('Log file not found');
-            }
-            
-            // Get initial file size
-            const stats = await filesystem.getStats(this.logPath);
+            await Neutralino.filesystem.getStats(this.logPath);
+            const stats = await Neutralino.filesystem.getStats(this.logPath);
             this.lastPosition = stats.size;
             
-            // Start watching
-            this.watching = true;
-            this.watchLog();
-            
+            // Simple interval-based watching
+            this.watchInterval = setInterval(() => this.checkLog(), 100);
         } catch (error) {
             console.error('Failed to start monitoring:', error);
             this.emit('error', error);
@@ -68,40 +63,45 @@ export class LogMonitor extends EventEmitter {
     }
 
     stop() {
-        this.watching = false;
+        if (this.watchInterval) {
+            clearInterval(this.watchInterval);
+            this.watchInterval = null;
+        }
     }
 
-    async watchLog() {
-        while (this.watching) {
-            try {
-                const stats = await Neutralino.filesystem.getStats(this.logPath);
-                if (stats.size > this.lastPosition) {
-                    const data = await Neutralino.filesystem.readFile(this.logPath, {
-                        position: this.lastPosition,
-                        length: stats.size - this.lastPosition
-                    });
-                    this.lastPosition = stats.size;
-                    
-                    // Process new lines
-                    const lines = data.split('\n');
-                    for (const line of lines) {
-                        if (!line.trim()) continue;
-                        
-                        this.stats.totalLinesProcessed++;
-                        this.processLine(line);
-                    }
-                }
-                
-                // Wait before next check
-                await new Promise(resolve => setTimeout(resolve, 100));
-                
-            } catch (error) {
-                console.error('Error watching log:', error);
-                this.emit('error', error);
-                // Wait before retry
-                await new Promise(resolve => setTimeout(resolve, 1000));
+    async checkLog() {
+        try {
+            const stats = await Neutralino.filesystem.getStats(this.logPath);
+            if (stats.size > this.lastPosition) {
+                const data = await Neutralino.filesystem.readFile(this.logPath, {
+                    position: this.lastPosition,
+                    length: stats.size - this.lastPosition
+                });
+                this.lastPosition = stats.size;
+                this.processLines(data);
             }
+        } catch (error) {
+            console.error('Error checking log:', error);
+            this.emit('error', error);
+            this.stop();
         }
+    }
+
+    processLines(data) {
+        data.split('\n').forEach(line => {
+            if (line.trim()) {
+                this.stats.totalLinesProcessed++;
+                this.processLine(line);
+            }
+        });
+    }
+
+    async restart(newConfig = {}) {
+        this.stop();
+        Object.assign(this, newConfig);
+        this.lastPosition = 0;
+        this.stats = this.createStats();
+        await this.start();
     }
 
     processLine(line) {
@@ -128,7 +128,7 @@ export class LogMonitor extends EventEmitter {
         }
 
         try {
-            const response = await fetch(`${this.botServerUrl}/api/trade-alert`, {
+            const response = await Neutralino.net.fetch(`${this.botServerUrl}/api/trade-alert`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -175,7 +175,7 @@ export class LogMonitor extends EventEmitter {
             throw new Error('No refresh token available');
         }
 
-        const response = await fetch(`${this.botServerUrl}/api/auth/refresh`, {
+        const response = await Neutralino.net.fetch(`${this.botServerUrl}/api/auth/refresh`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -194,28 +194,45 @@ export class LogMonitor extends EventEmitter {
         return tokens;
     }
 
-    setAuth(tokens) {
+    async setAuth(tokens) {
         this.discordTokens = tokens;
-        // Store tokens securely using Neutralino storage
-        Neutralino.storage.setData('discord_tokens', JSON.stringify(tokens));
+        this.isDiscordConnected = !!tokens;
+        try {
+            // Store tokens securely using Neutralino storage
+            await Neutralino.storage.setData('discord_tokens', JSON.stringify(tokens));
+        } catch (error) {
+            console.error('Failed to store auth tokens:', error);
+            throw new Error('Failed to save authentication data');
+        }
     }
 
-    clearAuth() {
+    async clearAuth() {
         this.discordTokens = null;
-        Neutralino.storage.removeData('discord_tokens');
+        this.isDiscordConnected = false;
+        try {
+            await Neutralino.storage.removeData('discord_tokens');
+        } catch (error) {
+            console.error('Failed to clear auth tokens:', error);
+        }
     }
 
     getDiscordTokens() {
         if (!this.discordTokens) {
-            const stored = Neutralino.storage.getData('discord_tokens');
-            if (stored) {
-                this.discordTokens = JSON.parse(stored);
+            try {
+                const stored = Neutralino.storage.getData('discord_tokens');
+                if (stored) {
+                    this.discordTokens = JSON.parse(stored);
+                    this.isDiscordConnected = true;
+                }
+            } catch (error) {
+                console.error('Failed to retrieve auth tokens:', error);
+                return null;
             }
         }
         return this.discordTokens;
     }
 
     isConnected() {
-        return !!this.getDiscordTokens();
+        return this.isDiscordConnected;
     }
-} 
+}

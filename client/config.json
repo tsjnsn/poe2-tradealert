@@ -4,12 +4,10 @@
     "botServerUrl": "http://localhost:5050"
   },
   "poe2": {
-    "logPath": "C:\\Program Files (x86)\\Grinding Gear Games\\Path of Exile 2\\logs\\Client.txt"
+    "logPath": "/mnt/c/Program Files (x86)/Grinding Gear Games/Path of Exile 2/logs/Client.txt"
   },
   "server": {
-    "clientPort": 3000
-  },
-  "debug": {
-    "enabled": false
+    "clientPort": 1240,
+    "host": "localhost"
   }
 }

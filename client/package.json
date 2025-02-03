@@ -5,7 +5,7 @@
   "description": "Path of Exile 2 Trade Alert System",
   "main": "src/index.js",
   "scripts": {
-    "start": "concurrently -k \"vite\" \"neu run\"",
+    "start": "neu run",
     "run": "vite build && neu run",
     "build": "vite build",
     "dev": "vite --host",
@@ -16,6 +16,7 @@
     "@tailwindcss/vite": "^4.0.3",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
     "tailwindcss": "^4.0.3"
   },
   "devDependencies": {

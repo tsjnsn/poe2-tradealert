@@ -1,29 +1,37 @@
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
+import { Neutralino } from '@neutralinojs/lib';
 import { resolvePath } from './paths';
 
 class TokenStore {
     constructor() {
-        this.configPath = Neutralino.filesystem.getPath('config');
-        this.tokenPath = Neutralino.filesystem.join(this.configPath, 'discord_tokens.json');
-        this.encryptionKey = this.getEncryptionKey();
+        this.configPath = null;
+        this.tokenPath = null;
+        this.encryptionKey = null;
+        this.init();
+    }
+
+    async init() {
+        this.configPath = await Neutralino.filesystem.getPath('config');
+        this.tokenPath = await Neutralino.filesystem.join(this.configPath, 'discord_tokens.json');
+        this.encryptionKey = await this.getEncryptionKey();
         
         // Ensure config directory exists
-        if (!fs.existsSync(this.configPath)) {
-            fs.mkdirSync(this.configPath, { recursive: true });
+        try {
+            await Neutralino.filesystem.readDirectory(this.configPath);
+        } catch {
+            await Neutralino.filesystem.createDirectory(this.configPath);
         }
     }
 
     // Get or create a stable encryption key
-    getEncryptionKey() {
-        const keyPath = Neutralino.filesystem.join(this.configPath, '.key');
+    async getEncryptionKey() {
+        const keyPath = await Neutralino.filesystem.join(this.configPath, '.key');
         try {
-            if (Neutralino.filesystem.exists(keyPath)) {
-                return Neutralino.filesystem.readFile(keyPath);
+            const exists = await Neutralino.filesystem.getStats(keyPath);
+            if (exists) {
+                return await Neutralino.filesystem.readFile(keyPath);
             } else {
-                const key = Neutralino.crypto.randomBytes(32).toString('hex');
-                Neutralino.filesystem.writeFile(keyPath, key, { mode: 0o600 });
+                const key = await Neutralino.crypto.generateKey();
+                await Neutralino.filesystem.writeFile(keyPath, key);
                 return key;
             }
         } catch (error) {
@@ -33,14 +41,11 @@ class TokenStore {
     }
 
     // Encrypt data
-    encrypt(text) {
+    async encrypt(text) {
         if (!this.encryptionKey) return text;
         try {
-            const iv = crypto.randomBytes(16);
-            const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(this.encryptionKey, 'hex'), iv);
-            let encrypted = cipher.update(text, 'utf8', 'hex');
-            encrypted += cipher.final('hex');
-            return `${iv.toString('hex')}:${encrypted}`;
+            const encrypted = await Neutralino.crypto.encrypt(text, this.encryptionKey);
+            return encrypted;
         } catch (error) {
             console.error('Encryption error:', error);
             return text;
@@ -48,14 +53,10 @@ class TokenStore {
     }
 
     // Decrypt data
-    decrypt(text) {
-        if (!this.encryptionKey || !text.includes(':')) return text;
+    async decrypt(text) {
+        if (!this.encryptionKey) return text;
         try {
-            const [ivHex, encrypted] = text.split(':');
-            const iv = Buffer.from(ivHex, 'hex');
-            const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(this.encryptionKey, 'hex'), iv);
-            let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-            decrypted += decipher.final('utf8');
+            const decrypted = await Neutralino.crypto.decrypt(text, this.encryptionKey);
             return decrypted;
         } catch (error) {
             console.error('Decryption error:', error);
@@ -64,13 +65,14 @@ class TokenStore {
     }
 
     // Load tokens from disk
-    loadTokens() {
+    async loadTokens() {
         try {
-            if (!fs.existsSync(this.tokenPath)) {
+            const exists = await Neutralino.filesystem.getStats(this.tokenPath);
+            if (!exists) {
                 return null;
             }
-            const encrypted = fs.readFileSync(this.tokenPath, 'utf8');
-            const decrypted = this.decrypt(encrypted);
+            const encrypted = await Neutralino.filesystem.readFile(this.tokenPath);
+            const decrypted = await this.decrypt(encrypted);
             return JSON.parse(decrypted);
         } catch (error) {
             console.error('Error loading tokens:', error);
@@ -79,11 +81,11 @@ class TokenStore {
     }
 
     // Save tokens to disk
-    saveTokens(tokens) {
+    async saveTokens(tokens) {
         try {
             const data = JSON.stringify(tokens);
-            const encrypted = this.encrypt(data);
-            fs.writeFileSync(this.tokenPath, encrypted, { mode: 0o600 });
+            const encrypted = await this.encrypt(data);
+            await Neutralino.filesystem.writeFile(this.tokenPath, encrypted);
             return true;
         } catch (error) {
             console.error('Error saving tokens:', error);
@@ -92,10 +94,11 @@ class TokenStore {
     }
 
     // Clear stored tokens
-    clearTokens() {
+    async clearTokens() {
         try {
-            if (fs.existsSync(this.tokenPath)) {
-                fs.unlinkSync(this.tokenPath);
+            const exists = await Neutralino.filesystem.getStats(this.tokenPath);
+            if (exists) {
+                await Neutralino.filesystem.removeFile(this.tokenPath);
             }
             return true;
         } catch (error) {
@@ -105,4 +108,4 @@ class TokenStore {
     }
 }
 
-export default new TokenStore(); 
+export default new TokenStore();

@@ -1,39 +1,21 @@
-import { filesystem, events } from '@neutralinojs/lib';
+import Neutralino from '@neutralinojs/lib';
 
 class ConfigManager {
     constructor() {
-        if (!window.NL_PATH) {
-            throw new Error('Neutralino environment not initialized');
-        }
+        this.config = {};
+        this.defaults = {};
+        this.configPath = '';
+        this.isInitialized = false;
         
-        // Normalize path separators for cross-platform compatibility
-        this.configPath = `${window.NL_PATH.replace(/\\/g, '/')}/config.json`;
-        
-        this.defaults = {
-            discord: {
-                clientId: '1333582185478885489',
-                botServerUrl: 'http://localhost:5050'
-            },
-            poe2: {
-                logPath: 'C:\\Program Files (x86)\\Grinding Gear Games\\Path of Exile 2\\logs\\Client.txt'
-            },
-            server: {
-                clientPort: 3000,
-                host: 'localhost'
-            },
-            debug: {
-                enabled: false,
-                logLevel: 'info'
-            }
-        };
-        this.config = null;
-        this.load();
+        const basePath = window.NL_PATH || './';
+        this.configPath = `${basePath.replace(/\\/g, '/')}/config.json`;
     }
 
     async load() {
+        this.defaults = await getDefaultConfig();
         try {
-            await filesystem.getStats(this.configPath);
-            const fileContent = await filesystem.readFile(this.configPath);
+            await Neutralino.filesystem.getStats(this.configPath);
+            const fileContent = await Neutralino.filesystem.readFile(this.configPath);
             const loadedConfig = JSON.parse(fileContent);
             this.config = this.deepMerge(this.defaults, loadedConfig);
         } catch (error) {
@@ -75,10 +57,17 @@ class ConfigManager {
         try {
             const configDir = this.configPath.substring(0, this.configPath.lastIndexOf('/'));
             
-            await filesystem.createDirectory(configDir, { recursive: true });
+            // Ensure the directory exists, create if it doesn't
+            try {
+                await Neutralino.filesystem.createDirectory(configDir, { recursive: true });
+            } catch (dirError) {
+                if (dirError.code !== 'NE_FS_DIRCRER') { // Ignore if directory already exists
+                    throw dirError;
+                }
+            }
             
-            await filesystem.writeFile(this.configPath, JSON.stringify(this.config, null, 2));
-            await events.broadcast('configChanged', this.config);
+            await Neutralino.filesystem.writeFile(this.configPath, JSON.stringify(this.config, null, 2));
+            await Neutralino.events.broadcast('configChanged', this.config);
         } catch (error) {
             console.error('Error saving config:', error);
             throw new Error(`Failed to save config: ${error.message}`);
@@ -90,8 +79,10 @@ class ConfigManager {
         if (value === undefined) {
             const defaultValue = key.split('.').reduce((obj, k) => obj && obj[k], this.defaults);
             if (defaultValue !== undefined) {
-                this.set(key, defaultValue);
-                return defaultValue;
+                // Create a deep copy of the default value before setting it
+                const clonedValue = JSON.parse(JSON.stringify(defaultValue));
+                this.set(key, clonedValue);
+                return clonedValue;
             }
         }
         return value;
@@ -116,6 +107,7 @@ class ConfigManager {
     }
 
     reset() {
+        console.log('Resetting config to defaults...');
         this.config = { ...this.defaults };
         this.save();
     }
@@ -137,11 +129,34 @@ class ConfigManager {
     }
 
     async validatePaths() {
-        const parts = await filesystem.getPathParts(this.config.poe2.logPath);
+        const parts = await Neutralino.filesystem.getPathParts(this.config.poe2.logPath);
         if(!parts.isFile) {
             throw new Error('POE2 log path must be a file');
         }
     }
 }
 
-export default new ConfigManager();
+async function getDefaultConfig() {
+    const osInfo = await Neutralino.computer.getOSInfo();
+    const isWindows = osInfo.name === 'Windows';
+
+    const poe2LogPath = isWindows ? 
+        'C:\\Program Files (x86)\\Grinding Gear Games\\Path of Exile 2\\logs\\Client.txt' :
+        '/mnt/c/Program Files (x86)/Grinding Gear Games/Path of Exile 2/logs/Client.txt';
+
+    return {
+        discord: {
+            clientId: '1333582185478885489',
+            botServerUrl: 'http://localhost:5050'
+        },
+        poe2: {
+            logPath: poe2LogPath
+        },
+        server: {
+            clientPort: 1240,
+            host: 'localhost'
+        }
+    };
+}
+
+export default ConfigManager;
