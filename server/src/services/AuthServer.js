@@ -48,36 +48,35 @@ class AuthServer {
         });
     }
 
-    start() {
+start() {
         // Auth endpoints
         this.app.get('/auth', (req, res) => {
             const clientId = process.env.DISCORD_CLIENT_ID;
-            const callbackPort = req.query.callback_port;
+            const redirectUri = req.query.redirect_uri;
 
-            if (!callbackPort) {
-                return res.status(400).json({ error: 'No callback port provided' });
+            if (!redirectUri) {
+                return res.status(400).json({ error: 'No redirect URI provided' });
             }
 
             // Generate a state parameter to validate the callback
-            const state = Buffer.from(JSON.stringify({ callback_port: callbackPort })).toString('base64');
-
+            const state = Buffer.from(JSON.stringify({ redirect_uri: redirectUri })).toString('base64');
+            const botServerRedirectUri = `http://localhost:${process.env.PORT}/auth/callback`;
             // Return auth URL instead of redirecting
-            const redirectUri = `http://localhost:${process.env.PORT}/auth/callback`;
-            const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=identify%20bot&permissions=8192&state=${state}`;
+            const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(botServerRedirectUri)}&response_type=code&scope=identify%20bot&permissions=8192&state=${state}`;
             res.json({ url: authUrl });
         });
 
         this.app.get('/auth/callback', async (req, res) => {
-            console.log('Incoming callback request headers:', req.headers);
-            console.log('Query parameters:', req.query);
-            
+            console.log('Received auth callback request');
             const { code, state } = req.query;
+            console.log('Query parameters:', { code: !!code, state: !!state });
             
-            let clientCallbackPort;
+            let clientRedirectUri;
             try {
+                console.log('Decoding state parameter');
                 const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
-                clientCallbackPort = stateData.callback_port;
-                console.log('Retrieved callback port from state:', clientCallbackPort);
+                clientRedirectUri = stateData.redirect_uri;
+                console.log('Decoded redirect URI:', clientRedirectUri);
             } catch (error) {
                 console.error('Failed to parse state:', error);
                 return res.status(400).send('Invalid state parameter. Please close this window and try again.');
@@ -85,24 +84,27 @@ class AuthServer {
             
             const handleError = (message) => {
                 console.error('Auth error:', message);
-                if (clientCallbackPort) {
+                if (clientRedirectUri) {
+                    console.log('Redirecting to client with error');
                     const errorData = Buffer.from(JSON.stringify({ error: message })).toString('base64');
-                    return res.redirect(`http://localhost:${clientCallbackPort}/auth/callback?error=${errorData}`);
+                    return res.redirect(`${clientRedirectUri}?error=${errorData}`);
                 } else {
                     return res.status(400).send(`Authentication error: ${message}. Please close this window and try again.`);
                 }
             };
             
             if (!code) {
+                console.log('No authorization code provided');
                 return handleError('No authorization code provided');
             }
 
-            if (!clientCallbackPort) {
-                return handleError('No callback port found in session');
+            if (!clientRedirectUri) {
+                console.log('No redirect URI found in state');
+                return handleError('No redirect URI found in state');
             }
 
             try {
-                // Exchange code for tokens (keeping client_secret secure)
+                console.log('Exchanging code for tokens');
                 const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
                     method: 'POST',
                     body: new URLSearchParams({
@@ -125,8 +127,9 @@ class AuthServer {
                 }
 
                 const tokenData = await tokenResponse.json();
+                console.log('Successfully obtained tokens');
 
-                // Get user info
+                console.log('Fetching user info');
                 const userResponse = await fetch('https://discord.com/api/users/@me', {
                     headers: {
                         Authorization: `Bearer ${tokenData.access_token}`,
@@ -140,25 +143,29 @@ class AuthServer {
                 }
 
                 const userData = await userResponse.json();
+                console.log('Successfully fetched user info:', { id: userData.id, username: userData.username });
                 
-                // Link user in bot
+                console.log('Linking user in bot');
                 await this.discordBot.linkUser(userData.id);
+                console.log('User linked successfully');
 
-                // Redirect to client with tokens and user info
+                console.log('Preparing response data');
                 const responseData = {
                     tokens: tokenData,
                     user: userData
                 };
                 
                 const encodedData = Buffer.from(JSON.stringify(responseData)).toString('base64');
-                res.redirect(`http://localhost:${clientCallbackPort}/auth/callback?data=${encodedData}`);
+                const redirectUri = `${clientRedirectUri}?data=${encodedData}`;
+                console.log('Redirecting to client with auth data:', redirectUri);
+                res.redirect(redirectUri);
             } catch (error) {
                 console.error('Auth error:', error);
                 return handleError(error.message);
             }
         });
 
-        // Add token refresh endpoint
+        // Token refresh endpoint
         this.app.post('/auth/refresh', async (req, res) => {
             const { refresh_token } = req.body;
             if (!refresh_token) {
@@ -191,8 +198,45 @@ class AuthServer {
             }
         });
 
-        // API endpoints
-        this.app.post('/api/trade-alert', (req, res) => this.handleTradeAlert(req, res));
+        // Trade alert endpoint
+        this.app.post('/api/trade-alert', async (req, res) => {
+            try {
+                const authHeader = req.headers.authorization;
+                if (!authHeader) {
+                    return res.status(401).send('No authorization header');
+                }
+
+                const accessToken = authHeader.split(' ')[1];
+                const userResponse = await fetch('https://discord.com/api/users/@me', {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!userResponse.ok) {
+                    return res.status(401).send('Invalid Discord token');
+                }
+
+                const userData = await userResponse.json();
+                const userId = userData.id;
+
+                // Re-link user if they have valid tokens but aren't linked
+                if (!this.discordBot.isUserLinked(userId)) {
+                    await this.discordBot.linkUser(userId);
+                }
+
+                const { player, message } = req.body;
+                if (!player || !message) {
+                    return res.status(400).send('Missing required fields');
+                }
+
+                await this.discordBot.sendTradeAlert(userId, { player, message });
+                res.status(200).send('Alert sent successfully');
+            } catch (error) {
+                console.error('Trade alert error:', error);
+                res.status(500).send('Internal server error');
+            }
+        });
 
         // Start server
         const port = parseInt(process.env.PORT) || 5050;
@@ -202,49 +246,7 @@ class AuthServer {
 
         return server;
     }
-
-    generateApiKey() {
-        return Buffer.from(Math.random().toString(36) + Date.now().toString()).toString('base64');
-    }
-
-    async handleTradeAlert(req, res) {
-        try {
-            const authHeader = req.headers.authorization;
-            if (!authHeader) {
-                return res.status(401).send('No authorization header');
-            }
-
-            const accessToken = authHeader.split(' ')[1];
-            const userResponse = await fetch('https://discord.com/api/users/@me', {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`
-                }
-            });
-
-            if (!userResponse.ok) {
-                return res.status(401).send('Invalid Discord token');
-            }
-
-            const userData = await userResponse.json();
-            const userId = userData.id;
-
-            // Re-link user if they have valid tokens but aren't linked
-            if (!this.discordBot.isUserLinked(userId)) {
-                await this.discordBot.linkUser(userId);
-            }
-
-            const { player, message } = req.body;
-            if (!player || !message) {
-                return res.status(400).send('Missing required fields');
-            }
-
-            await this.discordBot.sendTradeAlert(userId, { player, message });
-            res.status(200).send('Alert sent successfully');
-        } catch (error) {
-            console.error('Trade alert error:', error);
-            res.status(500).send('Internal server error');
-        }
-    }
 }
+
 
 module.exports = AuthServer; 

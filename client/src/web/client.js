@@ -113,7 +113,7 @@ async function updateStats() {
 async function authenticate() {
     try {
         const botServerUrl = configManager.get('discord.botServerUrl');
-        const response = await fetch(`${botServerUrl}/auth`);
+        const response = await fetch(`${botServerUrl}/auth?redirect_uri=${window.location.origin}`);
         const data = await response.json();
         
         if (!data.url) {
@@ -122,12 +122,7 @@ async function authenticate() {
         
         try {
             // Open auth window
-            await Neutralino.window.create(data.url, {
-                title: 'Discord Authentication',
-                width: 600,
-                height: 800,
-                center: true
-            });
+            await Neutralino.os.open(data.url);
         } catch (windowError) {
             throw new Error(`Failed to open authentication window: ${windowError.message}`);
         }
