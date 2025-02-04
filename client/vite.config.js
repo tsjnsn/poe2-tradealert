@@ -2,11 +2,12 @@ import { defineConfig } from 'vite'
 import { fileURLToPath } from 'url'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
+import solid from 'vite-plugin-solid'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
-  plugins: [tailwindcss()],
+  plugins: [solid(), tailwindcss()],
   root: 'src/web',
   base: './',
   publicDir: 'dist',
@@ -40,6 +41,6 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['@tailwindcss/vite'],
-    exclude: []
+    exclude: ['@neutralinojs/lib']
   }
 })

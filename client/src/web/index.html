@@ -2,87 +2,12 @@
 <html>
 <head>
     <title>POE2 Trade Monitor</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="./__neutralino_globals.js"></script>
-    <script type="module" src="./init.js" defer></script>
-    <script type="module" src="./client.js" defer></script>
 </head>
-<body class="bg-gray-50">
-    <div class="container mx-auto max-w-3xl p-5 mb-[200px]">
-        <div id="auth-status" class="flex items-center justify-between p-3 mb-4 rounded-lg bg-red-50 text-red-900">
-            <span>🔴 Not connected to Discord</span>
-            <div class="flex gap-2">
-                <button onclick="authenticate()" class="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                    Connect
-                </button>
-                <button onclick="logout()" class="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors hidden">
-                    Logout
-                </button>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-sm p-5 mb-5">
-            <h2 class="text-xl font-semibold mb-4">Monitor Statistics</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-gray-50 rounded-lg p-3 text-center">
-                    <div class="text-sm text-gray-600 mb-1">Uptime</div>
-                    <div id="uptime" class="text-lg font-medium text-gray-900">00:00:00</div>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-3 text-center">
-                    <div class="text-sm text-gray-600 mb-1">Lines Processed</div>
-                    <div id="lines" class="text-lg font-medium text-gray-900">0</div>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-3 text-center">
-                    <div class="text-sm text-gray-600 mb-1">Trade Messages</div>
-                    <div id="trades" class="text-lg font-medium text-gray-900">0</div>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-3 text-center">
-                    <div class="text-sm text-gray-600 mb-1">Unique Players</div>
-                    <div id="players" class="text-lg font-medium text-gray-900">0</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-xl shadow-sm p-5">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-semibold">Configuration</h2>
-                <button onclick="resetConfig()" class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
-                    Reset to Defaults
-                </button>
-            </div>
-            <div id="config-section">
-                <div id="config-fields" class="space-y-4">
-                    <!-- Config fields will be dynamically inserted here -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700">
-        <div class="container mx-auto max-w-3xl">
-            <div class="flex items-center justify-between px-4 py-2 border-b border-gray-700">
-                <h3 class="text-gray-200 font-medium">Console</h3>
-                <button onclick="toggleConsole()" class="text-gray-400 hover:text-gray-200 transition-colors">
-                    <svg id="console-toggle" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                </button>
-            </div>
-            <div id="console-container">
-                <div id="console" class="text-gray-200 p-4 h-[200px] overflow-y-auto font-mono text-sm">
-                    <div class="text-gray-400">Welcome to POE2 Trade Monitor</div>
-                    <div class="text-gray-400">Type /help for available commands</div>
-                </div>
-                <div class="p-4 pt-0">
-                    <input 
-                        type="text" 
-                        id="command" 
-                        placeholder="Enter command..." 
-                        onkeydown="handleCommandInput(event)"
-                        class="w-full px-4 py-2 bg-gray-800 text-gray-200 rounded-md border border-gray-700 focus:outline-none focus:border-blue-500 font-mono"
-                    >
-                </div>
-            </div>
-        </div>
-    </div>
+<body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
 </body>
 </html> 

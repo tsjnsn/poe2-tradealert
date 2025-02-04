@@ -1,6 +1,5 @@
 {
   "discord": {
-    "clientId": "1333582185478885489",
     "botServerUrl": "http://localhost:5050"
   },
   "poe2": {
