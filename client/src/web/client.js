@@ -11,15 +11,10 @@ let configManager;
 let webConsole;
 let auth;
 
-Neutralino.events.on('configChanged', ({ detail: config }) => {
-    console.log('Restarting log monitor...');
-    monitor.restart(config)
-    updateConfigDisplay(config);
-});
-
 // Initialize when the document is ready
 Neutralino.events.on('ready', async () => {
     console.log('Application ready event received');
+    Neutralino.storage.setData('ping', 'pong');
     
     try {
         console.log('Initializing config manager...');
@@ -81,6 +76,12 @@ function setupEventHandlers(monitor) {
         } else {
             webConsole.addMessage('Failed to refresh authentication automatically - please re-authenticate', 'error');
         }
+    });
+
+    Neutralino.events.on('configChanged', ({ detail: config }) => {
+        console.log('Restarting log monitor...');
+        monitor.restart(config)
+        updateConfigDisplay(config);
     });
 }
 
@@ -154,7 +155,7 @@ async function authenticateRefresh() {
 async function authenticate() {
     try {
         const botServerUrl = configManager.get('discord.botServerUrl');
-        const response = await fetch(`${botServerUrl}/auth?redirect_uri=${window.location.origin}/auth.html`);
+        const response = await fetch(`${botServerUrl}/auth?redirect_uri=${window.location.origin}/auth.html&NL_TOKEN=${NL_TOKEN}`);
         const data = await response.json();
         
         if (!data.url) {

@@ -11,7 +11,8 @@ export default defineConfig({
   base: './',
   publicDir: 'dist',
   build: {
-    sourcemap: true,
+    sourcemap: process.env.NODE_ENV !== 'production',
+    minify: 'terser',
     outDir: '../../dist',
     emptyOutDir: true,
     rollupOptions: {
@@ -20,32 +21,25 @@ export default defineConfig({
         auth: path.resolve(__dirname, 'src/web/auth.html')
       },
       output: {
-        entryFileNames: 'assets/[name].js',
+        entryFileNames: 'assets/[name].[hash].js',
         chunkFileNames: 'assets/[name].[hash].js',
         assetFileNames: (assetInfo) => {
-          const info = assetInfo.name.split('.')
-          const ext = info[info.length - 1]
+          const ext = path.extname(assetInfo.name).slice(1)
           if (/html/i.test(ext)) {
             return '[name].[ext]'
           }
-          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
-            return 'assets/[name].[hash].[ext]'
-          }
-          return 'assets/[name].[hash].[ext]'
+          return `assets/[name].[hash].[ext]`
         }
       }
-    }
-  },
-  server: {
-    port: 1240,
-    strictPort: true,
-    watch: {
-      usePolling: true
     }
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src')
     }
+  },
+  optimizeDeps: {
+    include: ['@tailwindcss/vite'],
+    exclude: []
   }
 })

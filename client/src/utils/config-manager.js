@@ -14,16 +14,17 @@ class ConfigManager {
     async load() {
         this.defaults = await getDefaultConfig();
         try {
-            await Neutralino.filesystem.getStats(this.configPath);
-            const fileContent = await Neutralino.filesystem.readFile(this.configPath);
-            const loadedConfig = JSON.parse(fileContent);
-            this.config = this.deepMerge(this.defaults, loadedConfig);
-        } catch (error) {
-            if(error.code === 'NE_FS_NOPATHE') {
-                console.log('Creating new config with defaults...');
+            const stats = await Neutralino.filesystem.getStats(this.configPath);
+            if(stats.isFile) {
+                const fileContent = await Neutralino.filesystem.readFile(this.configPath);
+                const loadedConfig = JSON.parse(fileContent);
+                this.config = this.deepMerge(this.defaults, loadedConfig);
+            } else {
                 this.config = { ...this.defaults };
                 await this.save();
+                return;
             }
+        } catch (error) {
             console.error('Error loading config:', error);
             console.log('Using default configuration...');
             this.config = { ...this.defaults };
@@ -128,10 +129,8 @@ class ConfigManager {
 
     validate() {
         const required = [
-            'discord.clientId',
             'discord.botServerUrl',
             'poe2.logPath',
-            'server.clientPort'
         ];
 
         const missing = required.filter(key => !this.get(key));
@@ -152,7 +151,7 @@ class ConfigManager {
 
 async function getDefaultConfig() {
     const osInfo = await Neutralino.computer.getOSInfo();
-    const isWindows = osInfo.name === 'Windows';
+    const isWindows = osInfo.name.includes('Windows');
 
     const poe2LogPath = isWindows ? 
         'C:\\Program Files (x86)\\Grinding Gear Games\\Path of Exile 2\\logs\\Client.txt' :
@@ -160,7 +159,6 @@ async function getDefaultConfig() {
 
     return {
         discord: {
-            clientId: '1333582185478885489',
             botServerUrl: 'http://localhost:5050'
         },
         poe2: {

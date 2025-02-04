@@ -5,9 +5,5 @@
   },
   "poe2": {
     "logPath": "/mnt/c/Program Files (x86)/Grinding Gear Games/Path of Exile 2/logs/Client.txt"
-  },
-  "server": {
-    "clientPort": 1240,
-    "host": "localhost"
   }
 }

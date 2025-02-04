@@ -8,7 +8,7 @@
   "url": "/",
   "enableServer": true,
   "enableNativeAPI": true,
-  "tokenSecurity": "none",
+  "tokenSecurity": "one-time",
   "logging": {
     "enabled": true,
     "writeToLogFile": true
@@ -28,7 +28,7 @@
   ],
   "modes": {
     "window": {
-      "title": "POE Trade Alerts",
+      "title": "PoE Trade Alert",
       "width": 800,
       "height": 500,
       "minWidth": 400,
@@ -65,7 +65,7 @@
   },
   "applicationName": "POE2 Trade Alert",
   "applicationIcon": "assets/icon.ico",
-  "author": "Your Name",
+  "author": "Tyler Johnson",
   "description": "Path of Exile 2 Trade Notification System",
-  "copyright": "Copyright © 2024 Your Name"
+  "copyright": "Copyright © 2024 Tyler Johnson"
 }

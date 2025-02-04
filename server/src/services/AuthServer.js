@@ -59,7 +59,7 @@ start() {
             }
 
             // Generate a state parameter to validate the callback
-            const state = Buffer.from(JSON.stringify({ redirect_uri: redirectUri })).toString('base64');
+            const state = Buffer.from(JSON.stringify({ redirect_uri: redirectUri, NL_TOKEN: req.query.NL_TOKEN })).toString('base64');
             const botServerRedirectUri = `http://localhost:${process.env.PORT}/auth/callback`;
             // Return auth URL instead of redirecting
             const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(botServerRedirectUri)}&response_type=code&scope=identify%20bot&permissions=8192&state=${state}`;
@@ -72,11 +72,14 @@ start() {
             console.log('Query parameters:', { code: !!code, state: !!state });
             
             let clientRedirectUri;
+            let NL_TOKEN;
             try {
                 console.log('Decoding state parameter');
                 const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
                 clientRedirectUri = stateData.redirect_uri;
+                NL_TOKEN = stateData.NL_TOKEN;
                 console.log('Decoded redirect URI:', clientRedirectUri);
+                console.log('Decoded NL_TOKEN:', NL_TOKEN);
             } catch (error) {
                 console.error('Failed to parse state:', error);
                 return res.status(400).send('Invalid state parameter. Please close this window and try again.');
@@ -156,8 +159,8 @@ start() {
                 };
                 
                 const encodedData = Buffer.from(JSON.stringify(responseData)).toString('base64');
-                const redirectUri = `${clientRedirectUri}?data=${encodedData}`;
-                console.log('Redirecting to client with auth data:', redirectUri);
+                const redirectUri = `${clientRedirectUri}?data=${encodedData}&connectToken=${NL_TOKEN}`;
+                console.log('Redirecting to client with auth data');
                 res.redirect(redirectUri);
             } catch (error) {
                 console.error('Auth error:', error);

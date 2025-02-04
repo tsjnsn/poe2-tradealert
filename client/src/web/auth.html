@@ -21,13 +21,12 @@
 
   <script type="module">
     import Neutralino from '@neutralinojs/lib';
+    const urlParams = new URLSearchParams(window.location.search);
+    const data = urlParams.get('data');
+    const error = urlParams.get('error');
 
     // Initialize when the document is ready
     Neutralino.events.on('ready', async () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const data = urlParams.get('data');
-        const error = urlParams.get('error');
-
         const statusText = document.getElementById('status-text');
 
         if (!data) {
