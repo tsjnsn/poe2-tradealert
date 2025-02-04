@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@neutralinojs/lib':
-        specifier: ^5.5.0
+        specifier: ^5.6.0
         version: 5.6.0
       '@solidjs/router':
         specifier: ^0.12.5

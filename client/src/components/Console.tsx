@@ -18,9 +18,8 @@ export const Console: Component = () => {
     setIsExpanded(!isExpanded());
   };
 
-  const handleTestMessage = (cmd: string) => {
-    const match = cmd.match(/^\/test-message\s*"([^"]+)"/);
-    const message = match ? match[1] : 'Hi, I would like to buy your Test Item listed for 5 divine in Standard';
+  const handleTestMessage = () => {
+    const message = 'Hi, I would like to buy your Test Item listed for 5 divine in Standard';
     
     Neutralino.events.broadcast('trade-alert', {
       player: 'TestTrader',
@@ -37,11 +36,11 @@ export const Console: Component = () => {
         addMessage({ text: 'Available commands:', type: 'info' });
         addMessage({ text: '/help - Show this help message', type: 'info' });
         addMessage({ text: '/clear - Clear console', type: 'info' });
-        addMessage({ text: '/test-message ["message"] - Send a test trade message', type: 'info' });
+        addMessage({ text: '/test-message - Send a test trade message', type: 'info' });
       } else if (cmd === '/clear') {
         setMessages([]);
-      } else if (cmd.startsWith('/test-message')) {
-        handleTestMessage(cmd);
+      } else if (cmd === '/test-message') {
+        handleTestMessage();
       } else {
         addMessage({ text: 'Unknown command. Type /help for available commands.', type: 'error' });
       }

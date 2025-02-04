@@ -20,7 +20,7 @@ function flattenConfig(obj: Record<string, any>, prefix = ''): ConfigField[] {
       key: fullKey,
       value,
       type: typeof value,
-      label: fullKey.split('.').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+      label: fullKey,
       description: getConfigDescription(fullKey)
     }];
   }, []);
@@ -120,6 +120,26 @@ export const Configuration: Component = () => {
     setValidationErrors({});
   };
 
+  const handleFilePicker = async (key: string) => {
+    console.log('Opening file picker...');
+    try {
+      const entry = await Neutralino.os.showOpenDialog('Select log file', {
+        filters: [
+          { name: 'Log files', extensions: ['txt', 'log'] }
+        ]
+      });
+      
+      if (entry && entry[0]) {
+        await handleConfigChange(key, entry[0]);
+      }
+    } catch (error) {
+      (window as any).consoleAddMessage?.({
+        text: `Error selecting file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        type: 'error'
+      });
+    }
+  };
+
   onMount(() => {
     Neutralino.events.on('configChanged', handleExternalConfigChange);
   });
@@ -142,7 +162,7 @@ export const Configuration: Component = () => {
         <button
           onClick={resetConfig}
           disabled={isLoading()}
-          class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-3 py-2 text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Reset to Defaults
         </button>
@@ -167,17 +187,28 @@ export const Configuration: Component = () => {
                 />
               ) : (
                 <div class="space-y-1">
-                  <input
-                    type={field.type === 'number' ? 'number' : 'text'}
-                    value={field.value as string | number}
-                    onChange={(e) => handleConfigChange(field.key, field.type === 'number' ? Number(e.currentTarget.value) : e.currentTarget.value)}
-                    disabled={isLoading()}
-                    class={`mt-1 block w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 ${
-                      validationErrors()[field.key] 
-                        ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
-                        : 'border-gray-300'
-                    }`}
-                  />
+                  <div class="flex gap-2">
+                    <input
+                      type={field.type === 'number' ? 'number' : 'text'}
+                      value={field.value as string | number}
+                      onChange={(e) => handleConfigChange(field.key, field.type === 'number' ? Number(e.currentTarget.value) : e.currentTarget.value)}
+                      disabled={isLoading()}
+                      class={`mt-1 block w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 ${
+                        validationErrors()[field.key] 
+                          ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                          : 'border-gray-300'
+                      }`}
+                    />
+                    {field.key === 'poe2.logPath' && (
+                      <button
+                        onClick={() => handleFilePicker(field.key)}
+                        disabled={isLoading()}
+                        class="mt-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Browse
+                      </button>
+                    )}
+                  </div>
                   {validationErrors()[field.key] && (
                     <p class="text-sm text-red-600">{validationErrors()[field.key]}</p>
                   )}

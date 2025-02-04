@@ -4,11 +4,10 @@ export class LogMonitor {
     constructor(configManager, auth, options = {}) {
         this.configManager = configManager;
         this.auth = auth;
-        this.logPath = configManager.get('poe2.logPath');
-        this.botServerUrl = configManager.get('discord.botServerUrl') || 'http://localhost:5050';
         this.watchInterval = null;
         this.lastPosition = 0;
         this.stats = this.createStats();
+        this.error = null;
 
         Neutralino.events.on('trade-alert', (ev) => {
             this.sendTradeAlert(ev.detail.player, ev.detail.message);
@@ -24,18 +23,35 @@ export class LogMonitor {
         };
     }
 
+    loadConfig() {
+        this.logPath = this.configManager.get('poe2.logPath');
+        this.botServerUrl = this.configManager.get('discord.botServerUrl') || 'http://localhost:5050';
+    }
+
     async start() {
+        this.loadConfig();
         if (this.watchInterval) return;
         
         try {
+            if (!this.logPath) {
+                throw new Error('Log path is not configured');
+            }
+
             await Neutralino.filesystem.getStats(this.logPath);
             const stats = await Neutralino.filesystem.getStats(this.logPath);
             this.lastPosition = stats.size;
             
-            // Start the interval
-            this.watchInterval = setInterval(() => this.checkLog(), 100);
+            this.watchInterval = setInterval(() => this.checkLog(), 1000);
+            this.error = null;
+            await Neutralino.events.broadcast('monitor-status', { status: 'active', error: null });
+            
         } catch (error) {
-            console.error('Failed to start monitoring:', error);
+            console.error('Failed to start monitoring:', error.message);
+            await Neutralino.events.broadcast('monitor-status', { 
+                status: 'error', 
+                error: this.error
+            });
+            throw error;
         }
     }
 
@@ -43,6 +59,7 @@ export class LogMonitor {
         if (this.watchInterval) {
             clearInterval(this.watchInterval);
             this.watchInterval = null;
+            Neutralino.events.broadcast('monitor-status', { status: 'inactive', error: null });
         }
     }
 
