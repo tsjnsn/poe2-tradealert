@@ -9,6 +9,10 @@ export class LogMonitor {
         this.watchInterval = null;
         this.lastPosition = 0;
         this.stats = this.createStats();
+
+        Neutralino.events.on('trade-alert', (ev) => {
+            this.sendTradeAlert(ev.detail.player, ev.detail.message);
+        });
     }
 
     createStats() {
@@ -110,16 +114,9 @@ export class LogMonitor {
                 Neutralino.events.on('discord-tokens-refreshed', refreshHandler);
                 return;
             }
-
-            const data = await response.json();
             
-            if (!response.ok) {
-                if (data.error === 'Cannot send messages to this user') {
-                    const error = 'Cannot send Discord DMs. Please enable DMs from server members in your Discord privacy settings.';
-                    console.error({ player, message, error });
-                    return;
-                }
-                throw new Error(data.error || 'Failed to send trade alert');
+            if (response.status !== 200) {
+                throw new Error(`Unexpected status code: ${response.status}`);
             }
 
             console.log('Trade alert sent successfully');

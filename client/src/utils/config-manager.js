@@ -165,10 +165,6 @@ async function getDefaultConfig() {
         },
         poe2: {
             logPath: poe2LogPath
-        },
-        server: {
-            clientPort: 1240,
-            host: 'localhost'
         }
     };
 }

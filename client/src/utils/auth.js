@@ -3,14 +3,13 @@ import Neutralino from '@neutralinojs/lib';
 const AUTH_STORAGE_KEY = 'discord_auth';
 
 export class Auth {
-    constructor(configManager, webConsole) {
+    constructor(configManager) {
         this.configManager = configManager;
-        this.webConsole = webConsole;
         this.authData = null;
         Neutralino.events.on('auth-callback', async (ev) => {
             console.log('Authentication callback received:', ev);
             console.log('Authentication callback detail:', ev.detail);
-            this.webConsole.addMessage(`Authentication callback received for user: ${JSON.stringify(ev.detail.user.global_name)}`, 'system');
+            Neutralino.events.broadcast('console-message', `Received Discord auth details for ${JSON.stringify(ev.detail.user.global_name)}`);
             if (ev.detail.tokens) {
                 await this.saveAuthData(ev.detail);
             } else {

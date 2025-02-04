@@ -1,10 +1,19 @@
+import Neutralino from '@neutralinojs/lib';
+
 export class WebConsole {
-    constructor(elementId = 'console') {
-        this.consoleElement = document.getElementById(elementId);
+    constructor(configManager) {
+        this.configManager = configManager;
+        this.consoleElement = document.getElementById('console');
         this.contentElement = document.getElementById('console-container');
+        this.textArea = document.getElementById('console');
         this.isVisible = false; // Start closed
         this.contentElement.style.display = 'none'; // Initially hide the content
         this.consoleElement.classList.add('collapsed'); // Add collapsed state
+
+        // Add event listener for console messages
+        Neutralino.events.on('console-message', (ev) => {
+            this.addMessage(ev.detail.message, 'system');
+        });
     }
 
     toggle() {
@@ -15,6 +24,9 @@ export class WebConsole {
         } else {
             this.consoleElement.classList.add('collapsed');
         }
+
+        const toggleIcon = document.getElementById('console-toggle');
+        toggleIcon.classList.toggle('rotate-180');
     }
 
     addMessage(text, type = 'system') {
@@ -35,15 +47,15 @@ export class WebConsole {
         
         message.className = classes;
         message.textContent = text;
-        this.contentElement.appendChild(message);
-        this.contentElement.scrollTop = this.contentElement.scrollHeight;
+        this.textArea.appendChild(message);
+        this.textArea.scrollTop = this.textArea.scrollHeight;
     }
 
     clear() {
-        this.contentElement.innerHTML = '';
+        this.textArea.innerHTML = '';
     }
 
-    async handleCommand(command, monitor, configManager) {
+    async handleCommand(command) {
         if (command === '/help') {
             const commands = {
                 '/help': 'Show available commands',
@@ -63,15 +75,13 @@ export class WebConsole {
         }
         
         if (command.startsWith('/test-message')) {
-            if (!monitor.isConnected()) {
-                this.addMessage('Not connected to Discord. Please authenticate first.', 'error');
-                return;
-            }
-            
             const match = command.match(/^\/test-message\s*"([^"]+)"/);
             const message = match ? match[1] : 'Hi, I would like to buy your Test Item listed for 5 divine in Standard';
             
-            monitor.sendTradeAlert('TestTrader', message);
+            Neutralino.events.broadcast('trade-alert', {
+                player: 'TestTrader',
+                message: message
+            });
             this.addMessage('Test trade alert sent.', 'system');
             return;
         }

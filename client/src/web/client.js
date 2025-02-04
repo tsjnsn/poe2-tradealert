@@ -22,16 +22,16 @@ Neutralino.events.on('ready', async () => {
     console.log('Application ready event received');
     
     try {
-        // Initialize web console
-        webConsole = new WebConsole('console');
-        
         console.log('Initializing config manager...');
         configManager = new ConfigManager();
         await configManager.load();
         console.log('Config manager initialized successfully');
+
+        // Initialize web console
+        webConsole = new WebConsole(configManager);
         
         // Initialize auth with configManager
-        auth = new Auth(configManager, webConsole);
+        auth = new Auth(configManager);
         await auth.loadAuthData();
         
         console.log('Creating log monitor instance...');
@@ -178,7 +178,7 @@ async function logout() {
 }
 
 async function handleCommand(command) {
-    await webConsole.handleCommand(command, monitor, configManager);
+    await webConsole.handleCommand(command);
 }
 
 async function loadConfig() {
@@ -256,6 +256,22 @@ function toggleConsole() {
 // Update stats every second
 setInterval(updateStats, 1000);
 
+// Add this function to handle command input
+function handleCommandInput(event) {
+    if (event.key === 'Enter') {
+        const input = event.target;
+        const command = input.value.trim();
+        
+        if (command) {
+            handleCommand(command);
+            input.value = '';
+        }
+        
+        // Prevent form submission if inside a form
+        event.preventDefault();
+    }
+}
+
 // Export functions used in HTML
 Object.assign(window, {
     authenticate,
@@ -263,5 +279,6 @@ Object.assign(window, {
     handleCommand,
     updateConfig,
     resetConfig,
-    toggleConsole
+    toggleConsole,
+    handleCommandInput
 });
