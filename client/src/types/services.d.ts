@@ -9,6 +9,7 @@ declare module '../services/LogMonitor' {
   export class LogMonitor {
     constructor(configManager: ConfigManager, auth: Auth);
     stats: LogMonitorStats;
+    watchInterval: NodeJS.Timer | null;
     start(): void;
     stop(): void;
     restart(config: any): void;

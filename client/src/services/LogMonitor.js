@@ -30,6 +30,7 @@ export class LogMonitor {
 
     async start() {
         this.loadConfig();
+        this.stats = this.createStats();
         if (this.watchInterval) return;
         
         try {
