@@ -11,6 +11,8 @@ const region = gcp.config.region || "us-central1";
 const serviceName = "tradealert-service";
 const apiGatewayName = "tradealert-gateway";
 const projectRoot = path.join(__dirname, "..");
+const dnsZoneName = "poe-tradealert-zone";
+
 
 // Load environment variables from .env.production
 const envVars: { [key: string]: string } = {};
@@ -60,19 +62,6 @@ const service = new gcp.cloudrunv2.Service(serviceName, {
     },
 });
 
-// Allow unauthenticated access to the service
-const iamPolicy = new gcp.cloudrunv2.ServiceIamPolicy(`${serviceName}-policy`, {
-    location: service.location,
-    project: service.project,
-    name: service.name,
-    policyData: JSON.stringify({
-        bindings: [{
-            role: "roles/run.invoker",
-            members: ["allUsers"],
-        }],
-    }),
-});
-
 // Create API Gateway
 const api = new gcp.apigateway.Api(apiGatewayName, {
     apiId: apiGatewayName,
@@ -83,8 +72,9 @@ const loadOpenApiConfig = (serviceUri: pulumi.Output<string>): pulumi.Output<str
     return serviceUri.apply(uri => {
         const configPath = path.join(__dirname, 'api-gateway-config.yaml');
         let configContent = fs.readFileSync(configPath, 'utf8');
-        // Replace the service URI placeholder
-        configContent = configContent.replace('${service_uri}', uri);
+        
+        // Ensure the service URI is correctly replaced
+        configContent = configContent.replace(/\$\{service_uri\}/g, uri); // Use regex to replace all instances
         return Buffer.from(configContent).toString('base64');
     });
 };
@@ -119,12 +109,65 @@ const apiConfig = new gcp.apigateway.ApiConfig(`${apiGatewayName}-config`, {
     },
 });
 
+// DNS Configuration
+const domainName = "poe2.com";
+const apiSubdomain = "api.tradealert";
+const fullDomain = `${apiSubdomain}.${domainName}`;
+
+// Reference an existing DNS zone instead of creating a new one
+const dnsZone = gcp.dns.ManagedZone.get(dnsZoneName, dnsZoneName);
+
+
+// Update the gateway configuration with custom domain
 const gateway = new gcp.apigateway.Gateway(`${apiGatewayName}`, {
     apiConfig: apiConfig.id,
     region: region,
     gatewayId: apiGatewayName,
+    displayName: fullDomain,
+});
+
+
+// Update API Gateway with custom domain
+const gatewayDomain = new gcp.apigateway.GatewayIamMember(`${apiGatewayName}-domain`, {
+    gateway: gateway.gatewayId,
+    role: "roles/apigateway.admin",
+    member: pulumi.interpolate`serviceAccount:${gatewayServiceAccount.email}`,
+});
+
+// Reserve a static IP for the API Gateway
+const gatewayIp = new gcp.compute.GlobalAddress(`${apiGatewayName}-ip`, {
+    name: `${apiGatewayName}-ip`,
+});
+
+// Create DNS A record for the API Gateway in the referenced managed zone
+const dnsRecord = new gcp.dns.RecordSet(`${apiGatewayName}-record`, {
+    name: `api.tradealert.poe2.com.`,
+    managedZone: dnsZone.name,
+    type: "A",
+    ttl: 300,
+    rrdatas: [gatewayIp.address], // Assuming gatewayIp is the IP of your API Gateway
+});
+
+// Allow only API Gateway to invoke the service
+const iamPolicy = new gcp.cloudrunv2.ServiceIamPolicy(`${serviceName}-policy`, {
+    location: service.location,
+    project: service.project,
+    name: service.name,
+    policyData: gatewayServiceAccount.email.apply(email => 
+        JSON.stringify({
+            bindings: [{
+                role: "roles/run.invoker",
+                members: [
+                    `serviceAccount:${email}`
+                ],
+            }],
+        })
+    ),
 });
 
 // Export useful variables
 export const cloudRunUrl = service.uri;
-export const apiGatewayUrl = pulumi.interpolate`https://${gateway.defaultHostname}`; 
+export const apiGatewayUrl = pulumi.interpolate`https://${gateway.defaultHostname}`;
+export const customDomainUrl = pulumi.interpolate`https://${fullDomain}`;
+export const nameServers = dnsZone.nameServers;
+export const gatewayIpAddress = gatewayIp.address;

@@ -10,12 +10,12 @@
     "preview": "pulumi preview"
   },
   "dependencies": {
-    "@pulumi/pulumi": "^3.0.0",
-    "@pulumi/gcp": "^7.0.0",
-    "@pulumi/docker": "^4.0.0"
+    "@pulumi/docker": "^4.6.1",
+    "@pulumi/gcp": "^8.18.0",
+    "@pulumi/pulumi": "^3.148.0"
   },
   "devDependencies": {
     "@types/node": "^18",
     "typescript": "^4.0.0"
   }
-} 
+}
