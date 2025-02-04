@@ -9,6 +9,7 @@ export default defineConfig({
   plugins: [tailwindcss()],
   root: 'src/web',
   base: './',
+  publicDir: 'dist',
   build: {
     sourcemap: true,
     outDir: '../../dist',
@@ -26,6 +27,9 @@ export default defineConfig({
           const ext = info[info.length - 1]
           if (/html/i.test(ext)) {
             return '[name].[ext]'
+          }
+          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
+            return 'assets/[name].[hash].[ext]'
           }
           return 'assets/[name].[hash].[ext]'
         }

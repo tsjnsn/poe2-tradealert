@@ -1,39 +1,59 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Auth Callback</title>
-    <script src="./__neutralino_globals.js"></script>
-    <script type="module" src="./init.js" defer></script>
+  <meta charset="UTF-8">
+  <title>Authentication Callback</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="./__neutralino_globals.js"></script>
+  <script type="module" src="./init.js" defer></script>
+  <link rel="stylesheet" href="../styles/style.css">
 </head>
-<body class="bg-gray-50">
-    <div class="container mx-auto max-w-3xl p-5">
-        <div id="auth-status" class="flex items-center justify-center p-3 mb-4 rounded-lg bg-gray-50">
-            <span id="status-text" class="text-gray-900">Processing authentication...</span>
-        </div>
+<body class="min-h-screen flex items-center justify-center bg-gray-900">
+  <div class="bg-white rounded-xl shadow-lg p-8 max-w-md mx-auto">
+    <div id="auth-status" class="flex flex-col items-center">
+      <!-- You may want to change or remove the logo if not needed -->
+      <img src="../../assets/icon.png" alt="Logo" class="mb-4 w-16 h-16">
+      <span id="status-text" class="text-gray-800 text-lg">
+        Processing authentication...
+      </span>
     </div>
+  </div>
 
-    <script type="module">
-        import Neutralino from '@neutralinojs/lib';
+  <script type="module">
+    import Neutralino from '@neutralinojs/lib';
 
-        // Initialize when the document is ready
-        Neutralino.events.on('ready', async () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const data = urlParams.get('data');
-            
-            if (!data) {
-                document.getElementById('status-text').textContent = 'Error: No authentication data received';
-                return;
+    // Initialize when the document is ready
+    Neutralino.events.on('ready', async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const data = urlParams.get('data');
+        const error = urlParams.get('error');
+
+        const statusText = document.getElementById('status-text');
+
+        if (!data) {
+            if (error) {
+                try {
+                    const errorObj = JSON.parse(atob(error));
+                    statusText.innerHTML = `<span class="text-red-400">Error: ${JSON.stringify(errorObj)}</span>`;
+                } catch(parseError) {
+                    statusText.innerHTML = '<span class="text-red-400">Error: Invalid error data received</span>';
+                }
+            } else {
+                statusText.innerHTML = '<span class="text-red-400">Error: No authentication data received</span>';
             }
+            return;
+        }
 
-            try {
-                Neutralino.events.broadcast('auth-callback', data);
-                // Close the window after successful auth
-                window.close(); // Scripts may close only the windows that were opened by them.
-            } catch (error) {
-                document.getElementById('status-text').textContent = `Error: ${error.message}`;
-                console.error('Authentication error:', error);
-            }
-        });
-    </script>
+        try {
+            const jsondata = JSON.parse(atob(data));
+            console.log('Authentication data:', jsondata);
+            statusText.innerHTML = '<span class="text-green-400">Authentication successful!</span>';
+            await Neutralino.events.broadcast('auth-callback', jsondata);
+        } catch (error) {
+            statusText.innerHTML = `<span class="text-red-400">Error: ${error.message}</span>`;
+            console.error('Authentication error:', error);
+        }
+    });
+  </script>
 </body>
 </html>

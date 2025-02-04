@@ -88,6 +88,20 @@ class ConfigManager {
         return value;
     }
 
+    mergeSet(key, value) {
+        const keys = key.split('.');
+        const lastKey = keys.pop();
+        const target = keys.reduce((obj, k) => {
+            if (!(k in obj)) obj[k] = {};
+            return obj[k];
+        }, this.config);
+
+        if (target[lastKey] !== value) {
+            target[lastKey] = value;
+            this.save();
+        }
+    }
+
     set(key, value) {
         const keys = key.split('.');
         const lastKey = keys.pop();

@@ -1,17 +1,14 @@
 import Neutralino from '@neutralinojs/lib';
 
 export class LogMonitor {
-    constructor(configManager, options = {}) {
+    constructor(configManager, auth, options = {}) {
         this.configManager = configManager;
+        this.auth = auth;
         this.logPath = configManager.get('poe2.logPath');
         this.botServerUrl = configManager.get('discord.botServerUrl') || 'http://localhost:5050';
         this.watchInterval = null;
         this.lastPosition = 0;
         this.stats = this.createStats();
-    }
-
-    isConnected() {
-        return this.configManager.get('discord.accessToken') !== null;
     }
 
     createStats() {
@@ -71,11 +68,9 @@ export class LogMonitor {
         });
     }
 
-    async restart(newConfig = {}) {
+    async restart() {
         this.stop();
-        Object.assign(this, newConfig);
         this.lastPosition = 0;
-        this.stats = this.createStats();
         await this.start();
     }
 
@@ -91,9 +86,7 @@ export class LogMonitor {
     }
 
     async sendTradeAlert(player, message) {
-        const tokens = {
-            access_token: this.configManager.get('discord.accessToken'),
-        }
+        const tokens = (await this.auth.getAuthData()).tokens;
 
         try {
             const response = await fetch(`${this.botServerUrl}/api/trade-alert`, {
@@ -107,14 +100,15 @@ export class LogMonitor {
 
             if (response.status === 401) {
                 console.log('Token expired, attempting refresh...');
-                try {
-                    await this.refreshDiscordTokens();
-                    console.log('Token refreshed successfully, retrying alert...');
-                    return this.sendTradeAlert(player, message);
-                } catch (refreshError) {
-                    console.log('Token refresh failed:', refreshError);
-                    return;
-                }
+                Neutralino.events.broadcast('auth-refresh');
+                const refreshHandler = () => {
+                    console.log('Token refreshed, retrying alert...');
+                    this.sendTradeAlert(player, message);
+                    Neutralino.events.off('discord-tokens-refreshed', refreshHandler);
+                };
+
+                Neutralino.events.on('discord-tokens-refreshed', refreshHandler);
+                return;
             }
 
             const data = await response.json();
@@ -133,10 +127,5 @@ export class LogMonitor {
         } catch (error) {
             console.log('Error sending trade alert:', error);
         }
-    }
-
-    async refreshDiscordTokens() {
-        // TODO: Implement refresh
-        throw new Error('Token refresh not implemented');
     }
 }

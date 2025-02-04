@@ -9,6 +9,7 @@ import { Auth } from '../utils/auth.js';
 let monitor;
 let configManager;
 let webConsole;
+let auth;
 
 Neutralino.events.on('configChanged', ({ detail: config }) => {
     console.log('Restarting log monitor...');
@@ -30,10 +31,11 @@ Neutralino.events.on('ready', async () => {
         console.log('Config manager initialized successfully');
         
         // Initialize auth with configManager
-        const auth = new Auth(configManager);
+        auth = new Auth(configManager, webConsole);
+        await auth.loadAuthData();
         
         console.log('Creating log monitor instance...');
-        monitor = new LogMonitor(configManager);
+        monitor = new LogMonitor(configManager, auth);
         console.log('Log monitor created successfully');
         
         console.log('Setting up event handlers...');
@@ -70,6 +72,16 @@ function setupEventHandlers(monitor) {
         monitor.stop();
         await Neutralino.events.exit();
     });
+
+    // Handle auth refresh
+    Neutralino.events.on('auth-refresh', async () => {
+        await authenticateRefresh();
+        if (await auth.getAuthData()) {
+            Neutralino.events.broadcast('discord-tokens-refreshed');
+        } else {
+            webConsole.addMessage('Failed to refresh authentication automatically - please re-authenticate', 'error');
+        }
+    });
 }
 
 function handleTradeEvent(data) {
@@ -100,7 +112,7 @@ async function updateStats() {
     document.getElementById('players').textContent = stats.players.size.toLocaleString();
     
     const authStatus = document.getElementById('auth-status');
-    if (monitor.isConnected()) {
+    if (await auth.getAuthData()) {
         authStatus.classList.remove('bg-red-50', 'text-red-900');
         authStatus.classList.add('bg-green-50', 'text-green-900');
         authStatus.querySelector('span').textContent = '🟢 Connected to Discord';
@@ -112,6 +124,30 @@ async function updateStats() {
         authStatus.querySelector('span').textContent = '🔴 Not connected to Discord';
         authStatus.querySelector('button').classList.remove('hidden');
         authStatus.querySelector('button:last-child').classList.add('hidden');
+    }
+}
+
+async function authenticateRefresh() {
+    try {
+        const botServerUrl = configManager.get('discord.botServerUrl');
+        const refreshToken = (await auth.getAuthData()).tokens.refresh_token;
+        const response = await fetch(`${botServerUrl}/auth/refresh`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ refresh_token: refreshToken })
+        });
+        const data = await response.json();
+        if (data.tokens) {
+            await auth.saveAuthData(data);
+            webConsole.addMessage('Authentication refreshed successfully', 'system');
+        } else {
+            webConsole.addMessage('Failed to refresh authentication automatically - please re-authenticate', 'error');
+        }
+    } catch (error) {
+        await auth.saveAuthData(null);
+        webConsole.addMessage('Error refreshing authentication: ' + error.message, 'error');
     }
 }
 
@@ -137,7 +173,7 @@ async function authenticate() {
 }
 
 async function logout() {
-    monitor.clearAuth();
+    await auth.saveAuthData(null);
     webConsole.addMessage('Logged out successfully', 'system');
 }
 
@@ -204,7 +240,7 @@ async function checkAuth() {
             const userData = await userResponse.json();
             updateUserInfo(userData);
         } else {
-            showLogin();
+            authenticate();
         }
     } catch (error) {
         webConsole.addMessage('Error checking authentication: ' + error.message, 'error');
