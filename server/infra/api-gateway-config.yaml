@@ -1,0 +1,21 @@
+swagger: '2.0'
+info:
+  title: Trade Alert API Gateway
+  description: API Gateway for Trade Alert Service
+  version: 1.0.0
+schemes:
+  - https
+produces:
+  - application/json
+paths:
+  /:
+    get:
+      summary: Default endpoint
+      operationId: default
+      x-google-backend:
+        address: ${service_uri}
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: string 

@@ -6,6 +6,7 @@ class AuthServer {
     constructor(discordBot) {
         this.app = express();
         this.discordBot = discordBot;
+        this.port = process.env.PORT || 5050;
         
         // Enable CORS - Reflect requesting origin
         this.app.use(cors({
@@ -48,7 +49,7 @@ class AuthServer {
         });
     }
 
-start() {
+    start() {
         // Auth endpoints
         this.app.get('/auth', (req, res) => {
             const clientId = process.env.DISCORD_CLIENT_ID;
@@ -242,9 +243,8 @@ start() {
         });
 
         // Start server
-        const port = parseInt(process.env.PORT) || 5050;
-        const server = this.app.listen(port, '0.0.0.0', () => {
-            console.log(`Auth server listening on port ${port}`);
+        const server = this.app.listen(this.port, () => {
+            console.log(`Auth server listening on port ${this.port}`);
         });
 
         return server;
