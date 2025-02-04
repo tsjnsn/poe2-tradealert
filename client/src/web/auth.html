@@ -5,7 +5,6 @@
   <title>Authentication Callback</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="./__neutralino_globals.js"></script>
-  <script type="module" src="./init.js" defer></script>
   <link rel="stylesheet" href="../styles/style.css">
 </head>
 <body class="min-h-screen flex items-center justify-center bg-gray-900">
@@ -21,9 +20,18 @@
 
   <script type="module">
     import Neutralino from '@neutralinojs/lib';
+    import { init, events } from '@neutralinojs/lib';
+
     const urlParams = new URLSearchParams(window.location.search);
+    const connectToken = urlParams.get('connectToken');
     const data = urlParams.get('data');
     const error = urlParams.get('error');
+    console.log({connectToken});
+    if (connectToken) {
+        window.NL_TOKEN = connectToken;
+    }
+
+    init();
 
     // Initialize when the document is ready
     Neutralino.events.on('ready', async () => {
