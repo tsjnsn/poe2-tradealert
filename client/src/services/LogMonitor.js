@@ -98,12 +98,20 @@ export class LogMonitor {
 
     processLine(line) {
         // Look for trade messages
-        const match = line.match(/\[INFO Client \d+\] (@From ([^:]+): .+)/);
+        const match = line.match(/\[.+\] (@From ([^:]+): .+)/);
         if (match) {
             const [, message, player] = match;
             this.stats.tradeMessagesFound++;
-            this.stats.players.add(player);
-            this.sendTradeAlert(player, message);
+            if (this.stats.players.has(player)) {
+                this.sendTradeAlert(player, message);
+                return;
+            }
+
+            // Check that the message is a trade message
+            if (message.includes('buy your') || message.includes('listed for') || message.includes('offer')) {
+                this.stats.players.add(player);
+                this.sendTradeAlert(player, message);
+            }
         }
     }
 
