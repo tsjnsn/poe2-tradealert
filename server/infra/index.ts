@@ -11,8 +11,7 @@ const region = gcp.config.region || "us-central1";
 const serviceName = "tradealert-service";
 const apiGatewayName = "tradealert-gateway";
 const projectRoot = path.join(__dirname, "..");
-const dnsZoneName = "poe-tradealert-zone";
-
+const dnsZoneName = "poe2-com-zone";
 
 // Load environment variables from .env.production
 const envVars: { [key: string]: string } = {};
@@ -114,10 +113,6 @@ const domainName = "poe2.com";
 const apiSubdomain = "api.tradealert";
 const fullDomain = `${apiSubdomain}.${domainName}`;
 
-// Reference an existing DNS zone instead of creating a new one
-const dnsZone = gcp.dns.ManagedZone.get(dnsZoneName, dnsZoneName);
-
-
 // Update the gateway configuration with custom domain
 const gateway = new gcp.apigateway.Gateway(`${apiGatewayName}`, {
     apiConfig: apiConfig.id,
@@ -134,18 +129,15 @@ const gatewayDomain = new gcp.apigateway.GatewayIamMember(`${apiGatewayName}-dom
     member: pulumi.interpolate`serviceAccount:${gatewayServiceAccount.email}`,
 });
 
-// Reserve a static IP for the API Gateway
-const gatewayIp = new gcp.compute.GlobalAddress(`${apiGatewayName}-ip`, {
-    name: `${apiGatewayName}-ip`,
-});
+const dnsZone = gcp.dns.ManagedZone.get(dnsZoneName, dnsZoneName);
 
-// Create DNS A record for the API Gateway in the referenced managed zone
+// Reference the new DNS zone instead of the existing one
 const dnsRecord = new gcp.dns.RecordSet(`${apiGatewayName}-record`, {
-    name: `api.tradealert.poe2.com.`,
+    name: `tradealert-api.poe2.com.`,
     managedZone: dnsZone.name,
-    type: "A",
+    type: "CNAME",
     ttl: 300,
-    rrdatas: [gatewayIp.address], // Assuming gatewayIp is the IP of your API Gateway
+    rrdatas: [pulumi.interpolate`${gateway.defaultHostname}.`],
 });
 
 // Allow only API Gateway to invoke the service
@@ -170,4 +162,4 @@ export const cloudRunUrl = service.uri;
 export const apiGatewayUrl = pulumi.interpolate`https://${gateway.defaultHostname}`;
 export const customDomainUrl = pulumi.interpolate`https://${fullDomain}`;
 export const nameServers = dnsZone.nameServers;
-export const gatewayIpAddress = gatewayIp.address;
+export const gatewayCname = gateway.defaultHostname;

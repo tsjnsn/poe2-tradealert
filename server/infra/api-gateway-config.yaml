@@ -8,7 +8,7 @@ schemes:
 produces:
   - application/json
 x-google-endpoints:
-  - name: api.tradealert.poe2.com
+  - name: tradealert-api.poe2.com
 securityDefinitions:
   api_key:
     type: apiKey
@@ -22,7 +22,7 @@ paths:
       summary: Health check endpoint
       operationId: healthCheck
       x-google-backend:
-        address: https://${service_uri}/_health
+        address: ${service_uri}/_health
       responses:
         '200':
           description: Service is healthy
@@ -43,7 +43,7 @@ paths:
       summary: Discord OAuth2 authorization URL
       operationId: getAuthUrl
       x-google-backend:
-        address: https://${service_uri}/auth
+        address: ${service_uri}/auth
       parameters:
         - name: redirect_uri
           in: query
@@ -69,7 +69,7 @@ paths:
       summary: Discord OAuth2 callback
       operationId: authCallback
       x-google-backend:
-        address: https://${service_uri}/auth/callback
+        address: ${service_uri}/auth/callback
       parameters:
         - name: code
           in: query
@@ -88,7 +88,7 @@ paths:
       summary: Refresh Discord access token
       operationId: refreshToken
       x-google-backend:
-        address: https://${service_uri}/auth/refresh
+        address: ${service_uri}/auth/refresh
       parameters:
         - name: refresh_token
           in: body
@@ -122,7 +122,7 @@ paths:
       security:
         - api_key: []
       x-google-backend:
-        address: https://${service_uri}/api/trade-alert
+        address: ${service_uri}/api/trade-alert
       parameters:
         - name: body
           in: body

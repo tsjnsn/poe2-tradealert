@@ -1,3 +1,0 @@
-config:
-  gcp:project: poe2-faq
-  gcp:region: us-central1
