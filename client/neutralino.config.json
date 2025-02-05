@@ -36,7 +36,7 @@
       "center": true,
       "fullScreen": false,
       "alwaysOnTop": false,
-      "icon": "assets/icon.ico",
+      "icon": "src/web/public/assets/icon.ico",
       "enableInspector": false,
       "borderless": false,
       "maximize": false,
@@ -64,7 +64,7 @@
     "distributionPath": "dist"
   },
   "applicationName": "POE2 Trade Alert",
-  "applicationIcon": "assets/icon.ico",
+  "applicationIcon": "src/web/public/assets/icon.ico",
   "author": "Tyler Johnson",
   "description": "Path of Exile 2 Trade Notification System",
   "copyright": "Copyright © 2024 Tyler Johnson"
