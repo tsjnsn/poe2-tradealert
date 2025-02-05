@@ -31,7 +31,7 @@ const getDefaultConfig = async (): Promise<Config> => ({
     poe2: {
         logPath: await (async () => {
             const osType = (await Neutralino.computer.getKernelInfo()).variant;
-            if (osType === 'Windows') {
+            if (osType === 'Windows NT') {
                 return defaultLogPathWindows;
             } else if (osType === 'Darwin') {
                 return defaultLogPathDarwin;
