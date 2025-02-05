@@ -69,7 +69,6 @@ export class Auth {
         } catch (err) {
             console.error('Error getting discord details from storage:', err);
             this.authData = null;
-            throw err;
         }
     }
 
