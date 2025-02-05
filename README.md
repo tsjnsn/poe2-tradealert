@@ -1,6 +1,30 @@
 # POE2 Trade Alert
 
-A desktop application and Discord bot system that monitors Path of Exile 2 trade whispers and sends them to you via Discord DM. Built with SolidJS, NeutralinoJS, and Discord.js.
+A desktop application and Discord bot system that monitors Path of Exile 2 trade whispers and sends them to you via Discord DM. Built with SolidJS and NeutralinoJS.
+
+## Quick Start Guide
+
+### 1. Download and Install
+
+1. Go to the [Releases](https://github.com/tsjnsn/poe2-tradealert/releases) page and download the zip file for your operating system
+2. Extract the zip file to any location on your computer, and run the executable - no installation required. Some metadata files will be created in the same directory as the executable.
+
+### 2. Setup
+
+1. Start the POE2 Trade Alert application
+2. Click the "Login with Discord" button
+3. Accept the Discord authorization request
+4. You're all set! The bot will now be able to send you trade messages via DM
+5. Test by receiving a trade message in-game, or using the `/test-message` command in the web console
+
+### Need Help?
+
+- Check the [Issues](https://github.com/tsjnsn/poe2-tradealert/issues) page for known problems
+- Report bugs or request features through our GitHub issues
+
+---
+
+# Dev Notes
 
 ## Architecture
 
@@ -20,19 +44,7 @@ The project consists of two main components:
 
 - Node.js 16 or higher
 - pnpm 8 or higher
-- A Discord account and application
-- Path of Exile 2 installed
-
-## Discord Application Setup
-
-1. Create a Discord Application:
-   - Visit the [Discord Developer Portal](https://discord.com/developers/applications)
-   - Create a new application
-   - Navigate to the "Bot" section and create a bot
-   - Enable necessary Privileged Gateway Intents
-   - Copy the bot token
-   - Under OAuth2 > General, copy the Client ID and Client Secret
-   - Add redirect URL: `http://localhost:5050/auth/callback`
+- A Discord account and developer application
 
 ## Installation
 
@@ -79,10 +91,7 @@ pnpm start
 
 - Real-time monitoring of POE2 trade whispers
 - Secure Discord authentication and DM notifications
-- Modern desktop UI with system tray integration
-- Multi-user support
-- Trade message parsing and formatting
-- Session persistence
+- Bring-your-own-server available
 
 ## Tech Stack
 
@@ -96,8 +105,6 @@ pnpm start
 - **Server**:
   - Node.js
   - Express.js
-  - Discord.js
-  - JWT for authentication
 
 ## Contributing
 
