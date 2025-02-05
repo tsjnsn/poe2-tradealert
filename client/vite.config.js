@@ -10,7 +10,6 @@ export default defineConfig({
   plugins: [solid(), tailwindcss()],
   root: 'src/web',
   base: './',
-  publicDir: 'dist',
   build: {
     sourcemap: process.env.NODE_ENV !== 'production',
     minify: 'terser',

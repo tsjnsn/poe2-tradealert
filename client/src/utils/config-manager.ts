@@ -1,5 +1,11 @@
 import Neutralino from '@neutralinojs/lib';
 
+const defaultBotServerUrl = import.meta.env.VITE_BOT_SERVER_URL || 'http://localhost:5050';
+const defaultLogPathWindows = 'C:\\Program Files (x86)\\Grinding Gear Games\\Path of Exile 2\\logs\\Client.txt';
+const defaultLogPathLinux = '/home/user/.local/share/Path of Exile 2/logs/Client.txt';
+const defaultLogPathWSL = '/mnt/c/Program Files (x86)/Grinding Gear Games/Path of Exile 2/logs/Client.txt';
+const defaultLogPathDarwin = '/Applications/Path of Exile 2/Contents/Resources/logs/Client.txt';
+
 interface Config {
     discord: {
         botServerUrl: string;
@@ -9,44 +15,64 @@ interface Config {
     };
 }
 
-const defaultConfig: Config = {
+const fallbackConfig: Config = {
     discord: {
-        botServerUrl: 'http://localhost:5050'
+        botServerUrl: defaultBotServerUrl
     },
     poe2: {
-        logPath: ''
+        logPath: defaultLogPathWindows
     }
 };
+
+const getDefaultConfig = async (): Promise<Config> => ({
+    discord: {
+        botServerUrl: defaultBotServerUrl
+    },
+    poe2: {
+        logPath: await (async () => {
+            const osType = (await Neutralino.computer.getKernelInfo()).variant;
+            if (osType === 'Windows') {
+                return defaultLogPathWindows;
+            } else if (osType === 'Darwin') {
+                return defaultLogPathDarwin;
+            } else { // assume WSL, sorry linux users
+                return defaultLogPathWSL;
+            }
+        })()
+    }
+});
 
 export default class ConfigManager {
     private config: Config;
     private configPath: string;
     private isInitialized: boolean;
-
+    private defaultConfig: Config;
+    
     constructor() {
-        this.config = { ...defaultConfig };
+        this.defaultConfig = fallbackConfig
+        this.config = fallbackConfig;
         this.isInitialized = false;
-        
         const basePath = window.NL_PATH || './';
         this.configPath = `${basePath.replace(/\\/g, '/')}/config.json`;
     }
 
     async load(): Promise<void> {
+        this.defaultConfig = await getDefaultConfig();
         try {
             const stats = await Neutralino.filesystem.getStats(this.configPath);
             if(stats.isFile) {
                 const fileContent = await Neutralino.filesystem.readFile(this.configPath);
                 const loadedConfig = JSON.parse(fileContent);
-                this.config = this.deepMerge(defaultConfig, loadedConfig);
+                this.config = this.deepMerge(this.defaultConfig, loadedConfig);
             } else {
-                this.config = { ...defaultConfig };
+                this.config = { ...this.defaultConfig };
                 await this.save();
             }
             this.isInitialized = true;
         } catch (error) {
             console.error('Error loading config:', error);
             console.log('Using default configuration...');
-            this.config = { ...defaultConfig };
+            this.config = { ...this.defaultConfig };
             await this.save();
             this.isInitialized = true;
         }
@@ -64,7 +90,7 @@ export default class ConfigManager {
                         sourceValue as any
                     );
                 } else {
-                    Object.assign(output, { [key]: sourceValue });
+                    (output as Record<string, any>)[key] = sourceValue;
                 }
             });
         }
@@ -132,6 +158,6 @@ export default class ConfigManager {
     }
 
     reset(): void {
-        this.config = { ...defaultConfig };
+        this.config = { ...this.defaultConfig };
     }
 } 

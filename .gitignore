@@ -47,3 +47,4 @@ src-old/
 out/
 .tmp/
 neutralinojs.log
+.storage

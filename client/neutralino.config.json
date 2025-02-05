@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
-  "applicationId": "com.poe.tradealert.app",
+  "applicationId": "com.poe2.tradealert.app",
   "version": "1.0.0",
   "defaultMode": "window",
   "port": 0,
