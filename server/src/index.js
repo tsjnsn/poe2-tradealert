@@ -1,6 +1,6 @@
-const { loadConfig } = require('./utils/config.js');
-const DiscordBot = require('./services/DiscordBot.js');
-const AuthServer = require('./services/AuthServer.js');
+const { loadConfig } = require('./config.js');
+const DiscordBot = require('./DiscordBot.js');
+const AuthServer = require('./AuthServer.js');
 
 // Singleton instances for Cloud Functions
 let discordBot;

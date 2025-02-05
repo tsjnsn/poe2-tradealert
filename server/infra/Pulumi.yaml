@@ -1,3 +1,0 @@
-name: poe2-tradealert
-runtime: nodejs
-description: Pulumi infrastructure for POE2 Trade Alert service 
