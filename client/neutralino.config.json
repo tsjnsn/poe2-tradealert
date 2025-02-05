@@ -1,0 +1,71 @@
+{
+  "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
+  "applicationId": "com.poe.tradealert.app",
+  "version": "1.0.0",
+  "defaultMode": "window",
+  "port": 0,
+  "documentRoot": "/dist",
+  "url": "/",
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "tokenSecurity": "one-time",
+  "logging": {
+    "enabled": true,
+    "writeToLogFile": true
+  },
+  "nativeBlockList": [],
+  "nativeAllowList": [
+    "*",
+    "app.*",
+    "os.*",
+    "filesystem.*",
+    "window.*",
+    "storage.*",
+    "debug.log"
+  ],
+  "allowedOrigins": [
+    "*"
+  ],
+  "modes": {
+    "window": {
+      "title": "PoE Trade Alert",
+      "width": 1000,
+      "height": 600,
+      "minWidth": 1000,
+      "minHeight": 600,
+      "center": true,
+      "fullScreen": false,
+      "alwaysOnTop": false,
+      "icon": "assets/icon.ico",
+      "enableInspector": false,
+      "borderless": false,
+      "maximize": false,
+      "hidden": false,
+      "resizable": true,
+      "exitProcessOnClose": true
+    },
+    "browser": {},
+    "cloud": {},
+    "chrome": {
+      "width": 800,
+      "height": 500,
+      "args": "--user-agent=\"Neutralinojs chrome mode\"",
+      "nativeBlockList": [
+        "filesystem.*",
+        "os.*"
+      ]
+    }
+  },
+  "cli": {
+    "binaryName": "poe2-tradealert",
+    "resourcesPath": "dist",
+    "binaryVersion": "5.6.0",
+    "clientVersion": "5.6.0",
+    "distributionPath": "dist"
+  },
+  "applicationName": "POE2 Trade Alert",
+  "applicationIcon": "assets/icon.ico",
+  "author": "Tyler Johnson",
+  "description": "Path of Exile 2 Trade Notification System",
+  "copyright": "Copyright © 2024 Tyler Johnson"
+}

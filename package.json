@@ -16,5 +16,6 @@
     "test:monitor": "cd client && pnpm test:monitor",
     "test:message": "cd client && pnpm test:message",
     "test:scan": "cd client && pnpm test:scan"
-  }
+  },
+  "license": "Apache-2.0"
 } 

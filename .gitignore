@@ -42,3 +42,8 @@ Thumbs.db
 
 # Build output
 client/dist/ 
+src-old/
+.next/
+out/
+.tmp/
+neutralinojs.log

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Authentication Callback</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="./__neutralino_globals.js"></script>
+  <link rel="stylesheet" href="../styles/style.css">
+</head>
+<body class="min-h-screen flex items-center justify-center bg-gray-900">
+  <div class="bg-white rounded-xl shadow-lg p-8 max-w-md mx-auto">
+    <div id="auth-status" class="flex flex-col items-center">
+      <!-- You may want to change or remove the logo if not needed -->
+      <img src="../../assets/icon.png" alt="Logo" class="mb-4 w-16 h-16">
+      <span id="status-text" class="text-gray-800 text-lg">
+        Processing authentication...
+      </span>
+    </div>
+  </div>
+
+  <script type="module">
+    import Neutralino from '@neutralinojs/lib';
+    import { init, events } from '@neutralinojs/lib';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const connectToken = urlParams.get('connectToken');
+    const data = urlParams.get('data');
+    const error = urlParams.get('error');
+    console.log({connectToken});
+    if (connectToken) {
+        window.NL_TOKEN = connectToken;
+    }
+
+    init();
+
+    // Initialize when the document is ready
+    Neutralino.events.on('ready', async () => {
+        const statusText = document.getElementById('status-text');
+
+        if (!data) {
+            if (error) {
+                try {
+                    const errorObj = JSON.parse(atob(error));
+                    statusText.innerHTML = `<span class="text-red-400">Error: ${JSON.stringify(errorObj)}</span>`;
+                } catch(parseError) {
+                    statusText.innerHTML = '<span class="text-red-400">Error: Invalid error data received</span>';
+                }
+            } else {
+                statusText.innerHTML = '<span class="text-red-400">Error: No authentication data received</span>';
+            }
+            return;
+        }
+
+        try {
+            const jsondata = JSON.parse(atob(data));
+            console.log('Authentication data:', jsondata);
+            statusText.innerHTML = '<span class="text-green-400">Authentication successful!</span>';
+            await Neutralino.events.broadcast('auth-callback', jsondata);
+        } catch (error) {
+            statusText.innerHTML = `<span class="text-red-400">Error: ${error.message}</span>`;
+            console.error('Authentication error:', error);
+        }
+    });
+  </script>
+</body>
+</html>
