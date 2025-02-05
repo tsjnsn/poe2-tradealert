@@ -2,6 +2,9 @@
 
 A desktop application and Discord bot system that monitors Path of Exile 2 trade whispers and sends them to you via Discord DM. Built with SolidJS and NeutralinoJS.
 
+![image](https://github.com/user-attachments/assets/f80fe22b-8bf4-4ac9-bc51-62aba3e134e8)
+
+
 ## Quick Start Guide
 
 ### 1. Download and Install
