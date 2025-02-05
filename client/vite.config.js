@@ -16,6 +16,7 @@ export default defineConfig({
     minify: 'terser',
     outDir: '../../dist',
     emptyOutDir: true,
+    target: 'esnext',
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'src/web/index.html'),
@@ -42,5 +43,15 @@ export default defineConfig({
   optimizeDeps: {
     include: ['@tailwindcss/vite'],
     exclude: ['@neutralinojs/lib']
+  },
+  esbuild: {
+    target: 'esnext',
+    format: 'esm',
+    tsconfigRaw: {
+      compilerOptions: {
+        useDefineForClassFields: true,
+        experimentalDecorators: true
+      }
+    }
   }
 })

@@ -11,6 +11,8 @@
     "noEmit": true,
     "isolatedModules": true,
     "skipLibCheck": true,
+    "useDefineForClassFields": true,
+    "experimentalDecorators": true,
     "baseUrl": "./",
     "paths": {
       "@/*": ["src/*"]
@@ -19,7 +21,7 @@
       "./node_modules/@types",
       "./src/types"
     ],
-    "types": ["solid-js", "solid-js/web", "vite/client"]
+    "types": ["vite/client"]
   },
   "include": [
     "src/**/*.ts",
