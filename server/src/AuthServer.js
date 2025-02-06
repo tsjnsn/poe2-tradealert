@@ -1,6 +1,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const cors = require('cors');
+const he = require('he');
 
 class AuthServer {
     constructor(discordBot) {
@@ -93,7 +94,7 @@ class AuthServer {
                     const errorData = Buffer.from(JSON.stringify({ error: message })).toString('base64');
                     return res.redirect(`${clientRedirectUri}?error=${errorData}`);
                 } else {
-                    return res.status(400).send(`Authentication error: ${message}. Please close this window and try again.`);
+                    return res.status(400).send(`Authentication error: ${he.encode(message)}. Please close this window and try again.`);
                 }
             };
             
