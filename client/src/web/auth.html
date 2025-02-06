@@ -21,6 +21,7 @@
   <script type="module">
     import Neutralino from '@neutralinojs/lib';
     import { init, events } from '@neutralinojs/lib';
+    import DOMPurify from 'dompurify';
 
     const urlParams = new URLSearchParams(window.location.search);
     const connectToken = urlParams.get('connectToken');
@@ -41,7 +42,8 @@
             if (error) {
                 try {
                     const errorObj = JSON.parse(atob(error));
-                    statusText.innerHTML = `<span class="text-red-400">Error: ${JSON.stringify(errorObj)}</span>`;
+                    const sanitizedError = DOMPurify.sanitize(JSON.stringify(errorObj));
+                    statusText.innerHTML = `<span class="text-red-400">Error: ${sanitizedError}</span>`;
                 } catch(parseError) {
                     statusText.innerHTML = '<span class="text-red-400">Error: Invalid error data received</span>';
                 }
