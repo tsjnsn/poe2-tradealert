@@ -11,7 +11,8 @@
   "tokenSecurity": "one-time",
   "logging": {
     "enabled": true,
-    "writeToLogFile": true
+    "writeToLogFile": true,
+    "logLevel": "debug"
   },
   "nativeBlockList": [],
   "nativeAllowList": [

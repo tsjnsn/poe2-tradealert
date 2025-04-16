@@ -64,14 +64,15 @@ export default class ConfigManager {
                 const fileContent = await Neutralino.filesystem.readFile(this.configPath);
                 const loadedConfig = JSON.parse(fileContent);
                 this.config = this.deepMerge(this.defaultConfig, loadedConfig);
+                Neutralino.debug.log('Config loaded successfully', 'INFO'); // P3998
             } else {
                 this.config = { ...this.defaultConfig };
                 await this.save();
             }
             this.isInitialized = true;
         } catch (error) {
-            console.error('Error loading config:', error);
-            console.log('Using default configuration...');
+            Neutralino.debug.log('Error loading config: ' + (error instanceof Error ? error.message : 'Unknown error'), 'ERROR'); // Peb86
+            Neutralino.debug.log('Using default configuration...', 'WARN'); // Peb86
             this.config = { ...this.defaultConfig };
             await this.save();
             this.isInitialized = true;
@@ -104,8 +105,9 @@ export default class ConfigManager {
     async save(): Promise<void> {
         try {
             await Neutralino.filesystem.writeFile(this.configPath, JSON.stringify(this.config, null, 2));
+            Neutralino.debug.log('Config saved successfully', 'INFO'); // P3998
         } catch (error) {
-            console.error('Error saving config:', error);
+            Neutralino.debug.log('Error saving config: ' + (error instanceof Error ? error.message : 'Unknown error'), 'ERROR'); // Peb86
             throw error;
         }
     }
@@ -160,4 +162,4 @@ export default class ConfigManager {
     reset(): void {
         this.config = { ...this.defaultConfig };
     }
-} 
+}
