@@ -30,15 +30,20 @@ export class Auth {
         this.configManager = configManager;
         this.authData = null;
         Neutralino.events.on('auth-callback', async (ev: { detail: AuthData }) => {
-            console.log('Authentication callback received:', ev);
-            console.log('Authentication callback detail:', ev.detail);
+            Neutralino.debug.log('Authentication callback received: ' + JSON.stringify(ev), 'INFO');
+            Neutralino.debug.log('Authentication callback detail: ' + JSON.stringify(ev.detail), 'INFO');
             Neutralino.events.broadcast('console-message', {
                 message: `Received Discord auth details for ${ev.detail.user?.global_name ?? 'Unknown User'}`
             });
             if (ev.detail.tokens) {
                 await this.saveAuthData(ev.detail);
             } else {
-                console.error('No access token received in authentication callback');
+                const errorMessage = 'No access token received in authentication callback';
+                Neutralino.debug.log(errorMessage, 'ERROR');
+                window.consoleAddMessage?.({
+                    text: errorMessage,
+                    type: 'error'
+                });
             }
         });
     }
@@ -48,11 +53,18 @@ export class Auth {
             this.authData = data;
             if (data) {
                 await Neutralino.storage.setData(AUTH_STORAGE_KEY, JSON.stringify(data));
+                Neutralino.debug.log('Auth data saved successfully', 'INFO');
             } else {
                 await Neutralino.storage.setData(AUTH_STORAGE_KEY, '');
+                Neutralino.debug.log('Auth data cleared successfully', 'INFO');
             }
         } catch (err) {
-            console.error('Error saving discord details to storage:', err);
+            const errorMessage = `Error saving discord details to storage: ${err instanceof Error ? err.message : 'Unknown error'}`;
+            Neutralino.debug.log(errorMessage, 'ERROR');
+            window.consoleAddMessage?.({
+                text: errorMessage,
+                type: 'error'
+            });
             throw err;
         }
     }
@@ -62,12 +74,18 @@ export class Auth {
             if ((await Neutralino.storage.getKeys()).includes(AUTH_STORAGE_KEY)) {
                 const authData = await Neutralino.storage.getData(AUTH_STORAGE_KEY);
                 this.authData = JSON.parse(authData);
+                Neutralino.debug.log('Auth data loaded successfully', 'INFO');
             } else {
                 this.authData = null;
-                console.warn('No discord details found in storage');
+                Neutralino.debug.log('No discord details found in storage', 'WARN');
             }
         } catch (err) {
-            console.error('Error getting discord details from storage:', err);
+            const errorMessage = `Error getting discord details from storage: ${err instanceof Error ? err.message : 'Unknown error'}`;
+            Neutralino.debug.log(errorMessage, 'ERROR');
+            window.consoleAddMessage?.({
+                text: errorMessage,
+                type: 'error'
+            });
             this.authData = null;
         }
     }
@@ -78,4 +96,4 @@ export class Auth {
         }
         return this.authData;
     }
-} 
+}

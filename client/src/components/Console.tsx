@@ -53,7 +53,14 @@ export const Console: Component = () => {
   };
 
   const addMessage = (message: ConsoleMessage) => {
-    setMessages(prev => [...prev, message]);
+    const formattedMessage = {
+      ...message,
+      text: `[${new Date().toLocaleTimeString()}] ${message.text}`
+    };
+    setMessages(prev => [...prev, formattedMessage]);
+    if (message.type === 'system') {
+      Neutralino.debug.log(message.text, 'INFO');
+    }
   };
 
   // Expose the addMessage function to the window for external use

@@ -18,27 +18,31 @@ class AppInitializer {
 
   public async initialize(): Promise<void> {
     try {
-      console.log('Initializing application...');
+      Neutralino.debug.log('Initializing application...', 'INFO');
       await this.setupNeutralino();
       await this.initializeServices();
       await this.setupEventHandlers();
       this.startMonitoring();
       setState('isInitialized', true);
-      console.log('Application initialized successfully');
+      Neutralino.debug.log('Application initialized successfully', 'INFO');
     } catch (error) {
-      console.error('Error during initialization:', error);
+      Neutralino.debug.log('Error during initialization: ' + (error instanceof Error ? error.message : 'Unknown error'), 'ERROR');
+      window.consoleAddMessage?.({
+        text: `Error during initialization: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        type: 'error'
+      });
       throw error;
     }
   }
 
   private async setupNeutralino(): Promise<void> {
-    console.log('Setting up Neutralino...');
+    Neutralino.debug.log('Setting up Neutralino...', 'INFO');
     await Neutralino.init();
     await Neutralino.storage.setData('ping', 'pong');
   }
 
   private async initializeServices(): Promise<void> {
-    console.log('Initializing services...');
+    Neutralino.debug.log('Initializing services...', 'INFO');
     
     // Initialize ConfigManager
     const configManager = new ConfigManager();
@@ -56,7 +60,7 @@ class AppInitializer {
   }
 
   private async setupEventHandlers(): Promise<void> {
-    console.log('Setting up event handlers...');
+    Neutralino.debug.log('Setting up event handlers...', 'INFO');
 
     // Handle trade events
     Neutralino.events.on('trade', ({ detail: data }) => {
@@ -98,9 +102,9 @@ class AppInitializer {
   }
 
   private async handleConfigEvent(config: any): Promise<void> {
-    console.log('Config event received:', config);
+    Neutralino.debug.log('Config event received: ' + JSON.stringify(config), 'INFO');
     if (state.monitor) {
-      console.log('Restarting log monitor...');
+      Neutralino.debug.log('Restarting log monitor...', 'INFO');
       state.monitor.restart(config);
     }
   }
@@ -128,12 +132,14 @@ class AppInitializer {
           text: 'Authentication refreshed successfully',
           type: 'success'
         });
+        Neutralino.debug.log('Authentication refreshed successfully', 'INFO');
         Neutralino.events.broadcast('discord-tokens-refreshed');
       } else {
         window.consoleAddMessage?.({
           text: 'Failed to refresh authentication automatically - please re-authenticate',
           type: 'error'
         });
+        Neutralino.debug.log('Failed to refresh authentication automatically - please re-authenticate', 'ERROR');
       }
     } catch (error) {
       if (state.auth) {
@@ -143,15 +149,16 @@ class AppInitializer {
         text: `Error refreshing authentication: ${error instanceof Error ? error.message : 'Unknown error'}`,
         type: 'error'
       });
+      Neutralino.debug.log('Error refreshing authentication: ' + (error instanceof Error ? error.message : 'Unknown error'), 'ERROR');
     }
   }
 
   private startMonitoring(): void {
-    console.log('Starting monitoring...');
+    Neutralino.debug.log('Starting monitoring...', 'INFO');
     if (state.monitor) {
       state.monitor.start();
     }
   }
 }
 
-export const appInitializer = AppInitializer.getInstance(); 
+export const appInitializer = AppInitializer.getInstance();

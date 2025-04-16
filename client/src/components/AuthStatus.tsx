@@ -10,9 +10,14 @@ export const AuthStatus: Component = () => {
     if (!state.configManager || !state.auth) return;
     setIsLoading(true);
 
+    const botServerUrl = state.configManager.get('discord.botServerUrl');
+    const authUrl = `${botServerUrl}/auth?redirect_uri=${window.location.origin}/auth.html&NL_TOKEN=${window.NL_TOKEN}`;
+
     try {
-      const botServerUrl = state.configManager.get('discord.botServerUrl');
-      const response = await fetch(`${botServerUrl}/auth?redirect_uri=${window.location.origin}/auth.html&NL_TOKEN=${window.NL_TOKEN}`);
+      const response = await fetch(authUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to get auth URL: ${response.status} ${response.statusText}`);
+      }
       const data = await response.json();
       
       if (!data.url) {
@@ -25,8 +30,10 @@ export const AuthStatus: Component = () => {
         throw new Error(`Failed to open authentication window: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     } catch (error) {
-      (window as any).consoleAddMessage?.({
-        text: 'Error starting authentication: ' + (error instanceof Error ? error.message : 'Unknown error'),
+      const errorMessage = `Error starting authentication: ${error instanceof Error ? error.message : 'Unknown error'} | Request: ${authUrl}`;
+      Neutralino.debug.log(errorMessage, 'ERROR');
+      window.consoleAddMessage?.({
+        text: errorMessage,
         type: 'error'
       });
     } finally {
@@ -38,14 +45,16 @@ export const AuthStatus: Component = () => {
     if (!state.configManager || !state.auth) return;
     setIsLoading(true);
 
+    const botServerUrl = state.configManager.get('discord.botServerUrl');
+    const refreshUrl = `${botServerUrl}/auth/refresh`;
+
     try {
-      const botServerUrl = state.configManager.get('discord.botServerUrl');
       const authData = await state.auth.getAuthData();
       if (!authData?.tokens?.refresh_token) {
         throw new Error('No refresh token available');
       }
 
-      const response = await fetch(`${botServerUrl}/auth/refresh`, {
+      const response = await fetch(refreshUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -53,23 +62,26 @@ export const AuthStatus: Component = () => {
         body: JSON.stringify({ refresh_token: authData.tokens.refresh_token })
       });
 
+      if (!response.ok) {
+        throw new Error(`Failed to refresh authentication: ${response.status} ${response.statusText}`);
+      }
+
       const data = await response.json();
       if (data.tokens) {
         await state.auth.saveAuthData(data);
         setIsAuthenticated(true);
-        (window as any).consoleAddMessage?.({
-          text: 'Authentication refreshed successfully',
-          type: 'success'
-        });
+        Neutralino.debug.log('Authentication refreshed successfully', 'INFO');
         Neutralino.events.broadcast('discord-tokens-refreshed');
       } else {
         throw new Error('Failed to refresh authentication');
       }
     } catch (error) {
+      const errorMessage = `Error refreshing authentication: ${error instanceof Error ? error.message : 'Unknown error'} | Request: ${refreshUrl} | Response: ${JSON.stringify(error.response)}`;
       await state.auth.saveAuthData(null);
       setIsAuthenticated(false);
-      (window as any).consoleAddMessage?.({
-        text: 'Error refreshing authentication: ' + (error instanceof Error ? error.message : 'Unknown error'),
+      Neutralino.debug.log(errorMessage, 'ERROR');
+      window.consoleAddMessage?.({
+        text: errorMessage,
         type: 'error'
       });
     } finally {
@@ -81,25 +93,32 @@ export const AuthStatus: Component = () => {
     if (!state.configManager || !state.auth) return;
     setIsLoading(true);
 
+    const botServerUrl = state.configManager.get('discord.botServerUrl');
+    const checkUrl = `${botServerUrl}/auth/check`;
+
     try {
-      const botServerUrl = state.configManager.get('discord.botServerUrl');
-      const response = await fetch(`${botServerUrl}/auth/check`);
+      const response = await fetch(checkUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to check authentication: ${response.status} ${response.statusText}`);
+      }
       const data = await response.json();
       
       if (data.authenticated) {
         const userResponse = await fetch(`${botServerUrl}/auth/user`);
+        if (!userResponse.ok) {
+          throw new Error(`Failed to get user data: ${userResponse.status} ${userResponse.statusText}`);
+        }
         const userData = await userResponse.json();
         setIsAuthenticated(true);
-        (window as any).consoleAddMessage?.({
-          text: `Connected as ${userData.global_name || 'Unknown User'}`,
-          type: 'success'
-        });
+        Neutralino.debug.log(`Connected as ${userData.global_name || 'Unknown User'}`, 'INFO');
       } else {
         await authenticate();
       }
     } catch (error) {
-      (window as any).consoleAddMessage?.({
-        text: 'Error checking authentication: ' + (error instanceof Error ? error.message : 'Unknown error'),
+      const errorMessage = `Error checking authentication: ${error instanceof Error ? error.message : 'Unknown error'} | Request: ${checkUrl}`;
+      Neutralino.debug.log(errorMessage, 'ERROR');
+      window.consoleAddMessage?.({
+        text: errorMessage,
         type: 'error'
       });
     } finally {
@@ -114,13 +133,12 @@ export const AuthStatus: Component = () => {
     try {
       await state.auth.saveAuthData(null);
       setIsAuthenticated(false);
-      (window as any).consoleAddMessage?.({
-        text: 'Logged out successfully',
-        type: 'success'
-      });
+      Neutralino.debug.log('Logged out successfully', 'INFO');
     } catch (error) {
-      (window as any).consoleAddMessage?.({
-        text: 'Error during logout: ' + (error instanceof Error ? error.message : 'Unknown error'),
+      const errorMessage = `Error during logout: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      Neutralino.debug.log(errorMessage, 'ERROR');
+      window.consoleAddMessage?.({
+        text: errorMessage,
         type: 'error'
       });
     } finally {
@@ -148,10 +166,7 @@ export const AuthStatus: Component = () => {
       if (detail.tokens) {
         await state.auth?.saveAuthData(detail);
         setIsAuthenticated(true);
-        (window as any).consoleAddMessage?.({
-          text: `Connected as ${detail.user?.global_name || 'Unknown User'}`,
-          type: 'success'
-        });
+        Neutralino.debug.log(`Connected as ${detail.user?.global_name || 'Unknown User'}`, 'INFO');
       }
     });
   });
