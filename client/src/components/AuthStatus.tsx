@@ -25,7 +25,12 @@ export const AuthStatus: Component = () => {
         throw new Error(`Failed to open authentication window: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     } catch (error) {
-      Neutralino.debug.log('Error starting authentication: ' + (error instanceof Error ? error.message : 'Unknown error'), 'ERROR');
+      const errorMessage = `Error starting authentication: ${error instanceof Error ? error.message : 'Unknown error'} | Request: ${JSON.stringify({ url: `${botServerUrl}/auth?redirect_uri=${window.location.origin}/auth.html&NL_TOKEN=${window.NL_TOKEN}` })}`;
+      Neutralino.debug.log(errorMessage, 'ERROR');
+      window.consoleAddMessage?.({
+        text: errorMessage,
+        type: 'error'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -60,9 +65,14 @@ export const AuthStatus: Component = () => {
         throw new Error('Failed to refresh authentication');
       }
     } catch (error) {
+      const errorMessage = `Error refreshing authentication: ${error instanceof Error ? error.message : 'Unknown error'} | Request: ${JSON.stringify({ url: `${botServerUrl}/auth/refresh`, body: { refresh_token: authData.tokens.refresh_token } })} | Response: ${JSON.stringify(error.response)}`;
       await state.auth.saveAuthData(null);
       setIsAuthenticated(false);
-      Neutralino.debug.log('Error refreshing authentication: ' + (error instanceof Error ? error.message : 'Unknown error'), 'ERROR');
+      Neutralino.debug.log(errorMessage, 'ERROR');
+      window.consoleAddMessage?.({
+        text: errorMessage,
+        type: 'error'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -86,7 +96,12 @@ export const AuthStatus: Component = () => {
         await authenticate();
       }
     } catch (error) {
-      Neutralino.debug.log('Error checking authentication: ' + (error instanceof Error ? error.message : 'Unknown error'), 'ERROR');
+      const errorMessage = `Error checking authentication: ${error instanceof Error ? error.message : 'Unknown error'} | Request: ${JSON.stringify({ url: `${botServerUrl}/auth/check` })}`;
+      Neutralino.debug.log(errorMessage, 'ERROR');
+      window.consoleAddMessage?.({
+        text: errorMessage,
+        type: 'error'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -101,7 +116,12 @@ export const AuthStatus: Component = () => {
       setIsAuthenticated(false);
       Neutralino.debug.log('Logged out successfully', 'INFO');
     } catch (error) {
-      Neutralino.debug.log('Error during logout: ' + (error instanceof Error ? error.message : 'Unknown error'), 'ERROR');
+      const errorMessage = `Error during logout: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      Neutralino.debug.log(errorMessage, 'ERROR');
+      window.consoleAddMessage?.({
+        text: errorMessage,
+        type: 'error'
+      });
     } finally {
       setIsLoading(false);
     }

@@ -27,6 +27,10 @@ class AppInitializer {
       Neutralino.debug.log('Application initialized successfully', 'INFO');
     } catch (error) {
       Neutralino.debug.log('Error during initialization: ' + (error instanceof Error ? error.message : 'Unknown error'), 'ERROR');
+      window.consoleAddMessage?.({
+        text: `Error during initialization: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        type: 'error'
+      });
       throw error;
     }
   }

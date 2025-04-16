@@ -64,15 +64,19 @@ export default class ConfigManager {
                 const fileContent = await Neutralino.filesystem.readFile(this.configPath);
                 const loadedConfig = JSON.parse(fileContent);
                 this.config = this.deepMerge(this.defaultConfig, loadedConfig);
-                Neutralino.debug.log('Config loaded successfully', 'INFO'); // P3998
+                Neutralino.debug.log('Config loaded successfully', 'INFO');
             } else {
                 this.config = { ...this.defaultConfig };
                 await this.save();
             }
             this.isInitialized = true;
         } catch (error) {
-            Neutralino.debug.log('Error loading config: ' + (error instanceof Error ? error.message : 'Unknown error'), 'ERROR'); // Peb86
-            Neutralino.debug.log('Using default configuration...', 'WARN'); // Peb86
+            Neutralino.debug.log('Error loading config: ' + (error instanceof Error ? error.message : 'Unknown error'), 'ERROR');
+            window.consoleAddMessage?.({
+                text: `Error loading config: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                type: 'error'
+            });
+            Neutralino.debug.log('Using default configuration...', 'WARN');
             this.config = { ...this.defaultConfig };
             await this.save();
             this.isInitialized = true;
@@ -105,9 +109,13 @@ export default class ConfigManager {
     async save(): Promise<void> {
         try {
             await Neutralino.filesystem.writeFile(this.configPath, JSON.stringify(this.config, null, 2));
-            Neutralino.debug.log('Config saved successfully', 'INFO'); // P3998
+            Neutralino.debug.log('Config saved successfully', 'INFO');
         } catch (error) {
-            Neutralino.debug.log('Error saving config: ' + (error instanceof Error ? error.message : 'Unknown error'), 'ERROR'); // Peb86
+            Neutralino.debug.log('Error saving config: ' + (error instanceof Error ? error.message : 'Unknown error'), 'ERROR');
+            window.consoleAddMessage?.({
+                text: `Error saving config: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                type: 'error'
+            });
             throw error;
         }
     }
