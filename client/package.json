@@ -15,7 +15,7 @@
   "dependencies": {
     "@neutralinojs/lib": "^6.0.0",
     "@solidjs/router": "^0.15.3",
-    "@tailwindcss/vite": "^4.0.3",
+    "@tailwindcss/vite": "^4.1.4",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.1.2",
     "cross-env": "^7.0.3",
