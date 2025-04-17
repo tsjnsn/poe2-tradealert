@@ -16,22 +16,22 @@
     "@neutralinojs/lib": "^6.0.0",
     "@solidjs/router": "^0.15.3",
     "@tailwindcss/vite": "^4.1.4",
-    "autoprefixer": "^10.4.20",
+    "autoprefixer": "^10.4.21",
     "concurrently": "^9.1.2",
     "cross-env": "^7.0.3",
     "solid-js": "^1.9.5",
-    "tailwindcss": "^4.0.3"
+    "tailwindcss": "^4.1.4"
   },
   "devDependencies": {
-    "@neutralinojs/neu": "^11.3.1",
-    "@types/node": "^20.11.16",
-    "terser": "^5.37.0",
-    "typescript": "^5.7.3",
+    "@neutralinojs/neu": "^11.4.0",
+    "@types/node": "^22.14.1",
+    "terser": "^5.39.0",
+    "typescript": "^5.8.3",
     "vite": "^6.3.1",
-    "vite-plugin-solid": "^2.11.1"
+    "vite-plugin-solid": "^2.11.6"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=22"
   },
   "author": "",
   "license": "Apache-2.0"

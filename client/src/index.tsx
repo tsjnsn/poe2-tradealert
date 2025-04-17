@@ -1,7 +1,7 @@
 import { render } from 'solid-js/web';
-import { appInitializer } from '../services/AppInitializer';
-import App from '../App';
-import '../styles/style.css';
+import { appInitializer } from './services/AppInitializer';
+import App from './App';
+import './styles/style.css';
 
 // Initialize the application
 appInitializer.initialize().then(() => {

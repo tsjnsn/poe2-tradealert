@@ -8,18 +8,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [solid(), tailwindcss()],
-  root: 'src/web',
+  root: 'src',
   base: './',
   build: {
     sourcemap: process.env.NODE_ENV !== 'production',
     minify: 'terser',
-    outDir: '../../dist',
+    outDir: '../dist',
     emptyOutDir: true,
     target: 'esnext',
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'src/web/index.html'),
-        auth: path.resolve(__dirname, 'src/web/auth.html')
+        main: path.resolve(__dirname, 'src/index.html'),
+        auth: path.resolve(__dirname, 'src/auth.html')
       },
       output: {
         entryFileNames: 'assets/[name].[hash].js',

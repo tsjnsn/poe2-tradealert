@@ -4,7 +4,6 @@ import { AuthStatus } from './components/AuthStatus';
 import { Statistics } from './components/Statistics';
 import { Configuration } from './components/Configuration';
 import { Console, isExpanded } from './components/Console';
-import './styles/style.css';
 
 const App: Component = () => {
   return (
