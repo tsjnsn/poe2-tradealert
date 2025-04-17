@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@neutralinojs/lib':
-        specifier: ^5.6.0
-        version: 5.6.0
+        specifier: ^6.0.0
+        version: 6.0.0
       '@solidjs/router':
         specifier: ^0.12.5
         version: 0.12.5(solid-js@1.9.4)
@@ -311,8 +311,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.25':
     resolution: {integrity: sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ==}
 
-  '@neutralinojs/lib@5.6.0':
-    resolution: {integrity: sha512-EyIAlurZKGfPWn9VuGhXwNO9LdwVI7oVRsR18KJkit3E3R80FXUpjfCHdAr9FtNsEqqWxJbeYMtFhp9ByndPgg==}
+  '@neutralinojs/lib@6.0.0':
+    resolution: {integrity: sha512-DZzkDTREfHmNubAIJAnzb/SlMImxLPHWW+hvOHogOVusxP+DJgVLGWWg9v2I3Hpts3kUD4ZW09nAovYRazBLnw==}
 
   '@neutralinojs/neu@11.3.1':
     resolution: {integrity: sha512-pq5OHGUPFvAKj7ELUFpVUxESG2r/4GuTCGgw/hZMtJYGD0RqPy7UjJhtgjo18hy4SYqUbQ2qdeHGPZXEyj1jWg==}
@@ -1560,7 +1560,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@neutralinojs/lib@5.6.0': {}
+  '@neutralinojs/lib@6.0.0': {}
 
   '@neutralinojs/neu@11.3.1':
     dependencies:
