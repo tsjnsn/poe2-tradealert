@@ -55,6 +55,8 @@ jobs:
           TAG_NAME="prerelease-$(date +'%Y%m%d%H%M%S')"
           git tag $TAG_NAME
           git push origin $TAG_NAME
+        outputs:
+          tag_name: ${{ steps.create_tag.outputs.tag_name }}
 
       - name: Create Prerelease
         id: create_prerelease
