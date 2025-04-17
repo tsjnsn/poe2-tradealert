@@ -49,14 +49,21 @@ jobs:
           cd client
           pnpm build
 
+      - name: Create Tag
+        id: create_tag
+        run: |
+          TAG_NAME="prerelease-$(date +'%Y%m%d%H%M%S')"
+          git tag $TAG_NAME
+          git push origin $TAG_NAME
+
       - name: Create Prerelease
         id: create_prerelease
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Prerelease ${{ github.ref }}
+          tag_name: ${{ steps.create_tag.outputs.TAG_NAME }}
+          release_name: Prerelease ${{ steps.create_tag.outputs.TAG_NAME }}
           draft: false
           prerelease: true
 
