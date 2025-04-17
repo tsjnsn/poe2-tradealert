@@ -1,0 +1,187 @@
+name: Manual Prerelease
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  VITE_BOT_SERVER_URL: ${{ vars.VITE_BOT_SERVER_URL }}
+
+jobs:
+  create-prerelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: |
+          cd client
+          pnpm install
+
+      - name: Build client
+        run: |
+          cd client
+          pnpm build
+
+      - name: Create Prerelease
+        id: create_prerelease
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Prerelease ${{ github.ref }}
+          draft: false
+          prerelease: true
+
+      - name: Package and Upload Linux ARM64
+        run: |
+          mkdir -p release/linux_arm64
+          cp client/dist/poe2-tradealert/poe2-tradealert-linux_arm64 release/linux_arm64/poe2-tradealert
+          cp client/dist/poe2-tradealert/resources.neu release/linux_arm64/
+          cd release
+          zip -r poe2-tradealert-linux_arm64.zip linux_arm64/
+        
+      - name: Upload Linux ARM64 Prerelease
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_prerelease.outputs.upload_url }}
+          asset_path: release/poe2-tradealert-linux_arm64.zip
+          asset_name: poe2-tradealert-linux_arm64.zip
+          asset_content_type: application/zip
+
+      - name: Package and Upload Linux ARMHF
+        run: |
+          mkdir -p release/linux_armhf
+          cp client/dist/poe2-tradealert/poe2-tradealert-linux_armhf release/linux_armhf/poe2-tradealert
+          cp client/dist/poe2-tradealert/resources.neu release/linux_armhf/
+          cd release
+          zip -r poe2-tradealert-linux_armhf.zip linux_armhf/
+
+      - name: Upload Linux ARMHF Prerelease
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_prerelease.outputs.upload_url }}
+          asset_path: release/poe2-tradealert-linux_armhf.zip
+          asset_name: poe2-tradealert-linux_armhf.zip
+          asset_content_type: application/zip
+
+      - name: Package and Upload Linux x64
+        run: |
+          mkdir -p release/linux_x64
+          cp client/dist/poe2-tradealert/poe2-tradealert-linux_x64 release/linux_x64/poe2-tradealert
+          cp client/dist/poe2-tradealert/resources.neu release/linux_x64/
+          cd release
+          zip -r poe2-tradealert-linux_x64.zip linux_x64/
+
+      - name: Upload Linux x64 Prerelease
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_prerelease.outputs.upload_url }}
+          asset_path: release/poe2-tradealert-linux_x64.zip
+          asset_name: poe2-tradealert-linux_x64.zip
+          asset_content_type: application/zip
+
+      - name: Package and Upload macOS ARM64
+        run: |
+          mkdir -p release/mac_arm64
+          cp client/dist/poe2-tradealert/poe2-tradealert-mac_arm64 release/mac_arm64/poe2-tradealert
+          cp client/dist/poe2-tradealert/resources.neu release/mac_arm64/
+          cd release
+          zip -r poe2-tradealert-mac_arm64.zip mac_arm64/
+
+      - name: Upload macOS ARM64 Prerelease
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_prerelease.outputs.upload_url }}
+          asset_path: release/poe2-tradealert-mac_arm64.zip
+          asset_name: poe2-tradealert-mac_arm64.zip
+          asset_content_type: application/zip
+
+      - name: Package and Upload macOS Universal
+        run: |
+          mkdir -p release/mac_universal
+          cp client/dist/poe2-tradealert/poe2-tradealert-mac_universal release/mac_universal/poe2-tradealert
+          cp client/dist/poe2-tradealert/resources.neu release/mac_universal/
+          cd release
+          zip -r poe2-tradealert-mac_universal.zip mac_universal/
+
+      - name: Upload macOS Universal Prerelease
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_prerelease.outputs.upload_url }}
+          asset_path: release/poe2-tradealert-mac_universal.zip
+          asset_name: poe2-tradealert-mac_universal.zip
+          asset_content_type: application/zip
+
+      - name: Package and Upload macOS x64
+        run: |
+          mkdir -p release/mac_x64
+          cp client/dist/poe2-tradealert/poe2-tradealert-mac_x64 release/mac_x64/poe2-tradealert
+          cp client/dist/poe2-tradealert/resources.neu release/mac_x64/
+          cd release
+          zip -r poe2-tradealert-mac_x64.zip mac_x64/
+
+      - name: Upload macOS x64 Prerelease
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_prerelease.outputs.upload_url }}
+          asset_path: release/poe2-tradealert-mac_x64.zip
+          asset_name: poe2-tradealert-mac_x64.zip
+          asset_content_type: application/zip
+
+      - name: Package and Upload Windows x64
+        run: |
+          mkdir -p release/win_x64
+          cp client/dist/poe2-tradealert/poe2-tradealert-win_x64.exe release/win_x64/poe2-tradealert.exe
+          cp client/dist/poe2-tradealert/resources.neu release/win_x64/
+          cd release
+          zip -r poe2-tradealert-win_x64.zip win_x64/
+
+      - name: Upload Windows x64 Prerelease
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_prerelease.outputs.upload_url }}
+          asset_path: release/poe2-tradealert-win_x64.zip
+          asset_name: poe2-tradealert-win_x64.zip
+          asset_content_type: application/zip 
